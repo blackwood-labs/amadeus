@@ -1,0 +1,10 @@
+# Ignore compiled output
+*.rpyc
+*.rpymc
+
+# Ignore hidden and temp files
+.*
+~*
+
+# Exceptions
+!.gitignore
