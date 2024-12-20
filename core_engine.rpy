@@ -3,6 +3,7 @@ init python:
   from ctypes import *
   import platform
   import os
+  import sys
 
   class AmadeusCoreEngine(AmadeusEngine):
     """
@@ -54,8 +55,24 @@ init python:
         mode (int): The mode flags which determine how to play the sound.
         volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
         fade (float): Duration in seconds to fade in.
+
+      Raises:
+        RuntimeError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      filepath = os.path.realpath(config.gamedir) + os.sep + filepath
+      filepath = filepath.encode(sys.getfilesystemencoding())
+
+      sound = c_void_p()
+      self.__call('System_CreateSound', self.__fmod, filepath, 0x0, 0, byref(sound))
+
+      channel = c_void_p()
+      self.__call('System_PlaySound', self.__fmod, sound, 0, False, byref(channel))
+      self.__channels[channel_id] = channel
+
+      self.__call('Channel_SetVolumeRamp', channel, False)
+      self.__call('Channel_SetVolume', channel, c_float(volume))
+
+      self.__call('System_Update', self.__fmod)
 
     def stop_sound(self, channel_id, fade):
       """
@@ -64,8 +81,22 @@ init python:
       Args:
         channel_id (int): The numberic ID of the channel to stop the sound on.
         fade (float): Duration in seconds to fade out.
+
+      Raises:
+        RuntimeError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      if not channel_id in self.__channels:
+        return
+
+      channel = self.__channels[channel_id]
+
+      if channel is None:
+        return
+
+      self.__call('Channel_Stop', channel)
+      self.__channels[channel_id] = None
+
+      self.__call('System_Update', self.__fmod)
 
     def __call(self, fn, *args):
       """
