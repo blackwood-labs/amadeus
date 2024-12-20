@@ -1,0 +1,10 @@
+# Binary files are not included in source
+*.so
+*.jar
+
+# FMOD header files are not allowed to be distributed
+*.h
+*.hpp
+
+# Keep folder structure
+!*.gitkeep

@@ -10,7 +10,17 @@ init python:
       self.__channel_list = []
       self.__version = version
 
-      self.__engine = AmadeusCoreEngine(channel_limit, version)
+      if renpy.android:
+        # The FMOD library expects to be loaded via Android JNI
+        # It encounters an ill-defined internal error when loading via python CDLL
+        # Therefore, we implement a separate engine implementation for Android
+        try:
+          self.__engine = AmadeusAndroidEngine(channel_limit, version)
+        except NameError:
+          # If the jnius library isn't available, try loading the core engine instead
+          self.__engine = AmadeusCoreEngine(channel_limit, version)
+      else:
+        self.__engine = AmadeusCoreEngine(channel_limit, version)
 
       # Ensure that the engine is properly shut down when reloading and exiting
       if not self.shutdown in config.quit_callbacks:
@@ -116,7 +126,7 @@ init python:
       Raises:
         ValueError: The specified file or channel does not exist.
       """
-      if not renpy.exists(filepath):
+      if not renpy.loadable(filepath):
         raise ValueError('File does not exist: ' + str(filepath))
 
       channel = self.__get_channel(channel)
