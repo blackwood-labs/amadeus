@@ -37,7 +37,7 @@ init python:
       """
       self.__engine.tick()
 
-    def play_sound(self, filepath, channel_id, mode, fade, volume):
+    def play_sound(self, filepath, channel_id, mode, volume, fade):
       """
       Plays sound from the given filepath on a specific channel.
 
@@ -45,10 +45,18 @@ init python:
         filepath (str): The path of the file to load and play.
         channel_id (int): The numeric ID of the channel to play the sound on.
         mode (int): The mode flags which determine how to play the sound.
-        fade (float): Duration in seconds to fade in.
         volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+        fade (float): Duration in seconds to fade in.
       """
-      self.__engine.play_sound(filepath, channel_id, mode, fade, volume)
+      # Assets in Android when packaged via rapt are packed such that we need
+      # to prefix each directory and file name with "x-"
+      sections = filepath.split('/');
+      for i, section in enumerate(sections):
+        sections[i] = 'x-' + sections[i]
+      filepath = '/'.join(sections)
+
+      # FMOD can find Android assets when prefixed with "file:///android_asset/"
+      self.__engine.play_sound('file:///android_asset/x-game/' + filepath, channel_id, mode, volume, fade)
 
     def stop_sound(self, channel_id, fade):
       """

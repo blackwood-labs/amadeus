@@ -15,10 +15,27 @@ import android.app.Activity;
  * @author Blackwood Labs
  */
 public class Amadeus {
+
+	// Native function declarations
+
+	private native void fmodInit(int channel_limit, int version);
+	private native void fmodShutdown();
+	private native void fmodTick();
+	private native void fmodPlaySound(String filepath, int channel_id, int mode, float volume, float fade);
+	private native void fmodStopSound(int channel_id, float fade);
+
 	/**
 	 * Static variable for Singleton pattern
 	 */
 	private static final Amadeus instance = new Amadeus();
+
+	/**
+	 * Private constructor to load the required libraries
+	 */
+	private Amadeus() {
+		System.loadLibrary("fmod");
+		System.loadLibrary("amadeus");
+	}
 
 	/**
 	 * Singleton accessor
@@ -38,20 +55,22 @@ public class Amadeus {
 	 */
 	public void init(Activity activity, int channel_limit, int version) {
 		org.fmod.FMOD.init(activity);
+
+		fmodInit(channel_limit, version);
 	}
 
 	/**
 	 * Shut down FMOD and release resources.
 	 */
 	public void shutdown() {
-		// Pass
+		fmodShutdown();
 	}
 
 	/**
 	 * Engine tick (20Hz).
 	 */
 	public void tick() {
-		// Pass
+		fmodTick();
 	}
 
 	/**
@@ -60,11 +79,11 @@ public class Amadeus {
 	 * @param filepath The path of the file to load and play.
      * @param channel_id The numeric ID of the channel to play the sound on.
      * @param mode The mode flags which determine how to play the sound.
-     * @param fade Duration in seconds to fade in.
      * @param volume Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+     * @param fade Duration in seconds to fade in.
 	 */
-	public void play_sound(String filepath, int channel_id, int mode, float fade, float volume) {
-		// Pass
+	public void play_sound(String filepath, int channel_id, int mode, float volume, float fade) {
+		fmodPlaySound(filepath, channel_id, mode, fade, volume);
 	}
 
 	/**
@@ -74,6 +93,6 @@ public class Amadeus {
      * @param fade Duration in seconds to fade out.
 	 */
 	public void stop_sound(int channel_id, float fade) {
-		// Pass
+		fmodStopSound(channel_id, fade);
 	}
 }

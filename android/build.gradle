@@ -1,5 +1,7 @@
 apply plugin: 'com.android.library'
 
+def src_root=project.file('src').absolutePath
+
 android {
     compileSdkVersion 33
     ndkVersion "21.3.6528147"
@@ -10,6 +12,18 @@ android {
         versionCode 1
         versionName "1.0"
 
+        externalNativeBuild {
+            cmake {
+                cppFlags '-std=c++11'
+                arguments '-DSRC_ROOT=' + src_root
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+             path 'CMakeLists.txt'
+        }
     }
 
     buildTypes {
