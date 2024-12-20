@@ -112,10 +112,14 @@ init python:
       channel = self.__get_channel(channel)
       channel['volume'] = volume
 
+      mode = (0x0 | 0x02000000 | 0x08000000) # FMOD_DEFAULT | FMOD_IGNORETAGS | FMOD_LOWMEM;
+      if loop:
+        mode = (mode | 0x00000002) # FMOD_LOOP_NORMAL
+
       relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
 
       self.stop_sound(channel['name'])
-      self.__engine.play_sound(filepath, channel['id'], loop, relative_volume, fade)
+      self.__engine.play_sound(filepath, channel['id'], mode, relative_volume, fade)
 
     def stop_sound(self, channel=None, fade=0.0):
       """

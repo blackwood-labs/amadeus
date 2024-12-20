@@ -63,7 +63,7 @@ init python:
       filepath = filepath.encode(sys.getfilesystemencoding())
 
       sound = c_void_p()
-      self.__call('System_CreateSound', self.__fmod, filepath, 0x0, 0, byref(sound))
+      self.__call('System_CreateSound', self.__fmod, filepath, mode, 0, byref(sound))
 
       channel = c_void_p()
       self.__call('System_PlaySound', self.__fmod, sound, 0, False, byref(channel))
