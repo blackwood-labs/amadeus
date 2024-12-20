@@ -9,6 +9,7 @@ init python:
       self.__channel_limit = channel_limit
       self.__channel_list = []
       self.__version = version
+      self.__mixer_volume = {}
 
       if renpy.android:
         # The FMOD library expects to be loaded via Android JNI
@@ -41,6 +42,7 @@ init python:
       Engine tick (20Hz).
       """
       self.__engine.tick()
+      self.__sync_mixer_volume()
 
     def get_engine(self):
       """
@@ -216,3 +218,25 @@ init python:
         return 0.0
 
       return _preferences.get_volume(mixer)
+
+    def __set_mixer_volume(self, mixer, volume):
+      """
+      Sets the volume level for all channels associated with the specified Ren'Py mixer.
+
+      Args:
+        mixer (str): The name of the Ren'Py mixer fetch the volume for.
+        volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+      """
+      for channel in self.__channel_list:
+        if mixer == channel['mixer']:
+          self.__engine.set_sound_volume(channel['id'], volume * channel['volume'])
+
+    def __sync_mixer_volume(self):
+      """
+      Synchronize the volume of Ren'Py mixers with all associated channels.
+      """
+      for mixer in renpy.music.get_all_mixers():
+        volume = self.__get_mixer_volume(mixer)
+        if mixer not in self.__mixer_volume or volume != self.__mixer_volume[mixer]:
+          self.__set_mixer_volume(mixer, volume)
+          self.__mixer_volume[mixer] = volume
