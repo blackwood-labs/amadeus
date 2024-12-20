@@ -39,6 +39,19 @@ label amadeus_tests:
     except ValueError:
       pass
 
+  # Test that too many channels causes a RuntimeError
+  python:
+    orig_channels = amadeus.get_channels()
+    try:
+      for x in range(0, amadeus.get_channel_limit()):
+        amadeus.register_channel(x, "music")
+      raise RuntimeError("Failed test...")
+    except RuntimeError:
+      pass
+    amadeus.clear_channels()
+    for channel in orig_channels:
+      amadeus.register_channel(channel['name'], channel['mixer'])
+
   """
   Registering channels...{fast} Done!
   """

@@ -50,9 +50,13 @@ init python:
 
       Raises:
         ValueError: The specific Ren'Py mixer does not exist.
+        RuntimeError: Attempted to register more than the maximum number of channels.
       """
       if not mixer in renpy.music.get_all_mixers():
         raise ValueError('Unknown Ren\'Py mixer: ' + str(mixer))
+
+      if len(self.__channel_list) == self.__channel_limit:
+        raise RuntimeError('Exceeded maximum number of channels')
 
       # Avoid duplicate registrations
       for channel in self.__channel_list:
