@@ -1,12 +1,48 @@
 init python:
 
+  from ctypes import *
+  import platform
+  import os
+
   class AmadeusCoreEngine(AmadeusEngine):
     """
     Primary cross-platform engine for Amadeus.
     """
 
-    def __init__(self):
-      pass
+    def __init__(self, channel_limit, version):
+      """
+      Initialize FMOD.
+
+      Args:
+        channel_limit (int): The maximum number of channels allowed to be registered.
+        version (int): The version of FMOD loaded via the pre-compiled libraries.
+      """
+      self.__channels = {}
+
+      if platform.system() == 'Windows':
+        fmod_lib = 'fmod.dll'
+      elif platform.system() == 'Linux':
+        fmod_lib = 'libfmod.so'
+      elif platform.system() == 'Darwin':
+        arch = platform.architecture()[0]
+        if arch == '32bit':
+          # There is no 32 bit FMOD library for Mac OS
+          raise RuntimeError('32-bit architecture for Mac OS is not supported')
+        fmod_lib = 'libfmod.dylib'
+      else:
+        raise RuntimeError('Operating system is not supported')
+
+      self.__api = CDLL(os.path.realpath(config.gamedir) + '/amadeus/lib/' + fmod_lib)
+
+      self.__fmod = c_void_p()
+      self.__call('System_Create', byref(self.__fmod), version)
+      self.__call('System_Init', self.__fmod, channel_limit, 0x0, 0) # FMOD_INIT_NORMAL
+
+    def shutdown(self):
+      """
+      Shut down the engine to free allocated resources.
+      """
+      self.__call('System_Release', self.__fmod)
 
     def play_sound(self, filepath, channel_id, mode, volume, fade):
       """
@@ -30,3 +66,19 @@ init python:
         fade (float): Duration in seconds to fade out.
       """
       pass
+
+    def __call(self, fn, *args):
+      """
+      Makes a call to the FMOD library and validates the result was successful.
+
+      Args:
+        fn (string): The function name to call.
+        args: Arguments to the function.
+
+      Raises:
+        RuntimeError: The result was not FMOD_RESULT_OK
+      """
+      result = getattr(self.__api, 'FMOD_' + fn)(*args)
+
+      if result != 0x0: # FMOD_RESULT_OK
+        raise RuntimeError('FMOD encountered an error: ' + str(result))

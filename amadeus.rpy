@@ -5,9 +5,22 @@ init python:
     Amadeus sound engine.
     """
 
-    def __init__(self):
+    def __init__(self, channel_limit=8, version=0x00020299):
+      self.__channel_limit = channel_limit
       self.__channel_list = []
-      self.__engine = AmadeusCoreEngine()
+      self.__version = version
+
+      self.__engine = AmadeusCoreEngine(channel_limit, version)
+
+      # Ensure that the engine is properly shut down when reloading and exiting
+      if not self.shutdown in config.quit_callbacks:
+        config.quit_callbacks.append(self.shutdown)
+
+    def shutdown(self):
+      """
+      Shut down the engine to free allocated resources.
+      """
+      self.__engine.shutdown()
 
     def get_engine(self):
       """
@@ -17,6 +30,15 @@ init python:
         The active engine.
       """
       return self.__engine
+
+    def get_channel_limit(self):
+      """
+      Accessor to get the channel limit.
+
+      Returns:
+        The channel limit.
+      """
+      return self.__channel_limit
 
     def register_channel(self, name, mixer):
       """

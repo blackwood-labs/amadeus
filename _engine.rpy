@@ -8,6 +8,13 @@ init python:
     """
 
     @abstractmethod
+    def shutdown(self):
+      """
+      Shut down the engine to free allocated resources.
+      """
+      pass
+
+    @abstractmethod
     def play_sound(self, filepath, channel_id, mode, volume, fade):
       """
       Plays sound from the given filepath on a specific channel.
