@@ -69,8 +69,29 @@ init python:
       self.__call('System_PlaySound', self.__fmod, sound, 0, False, byref(channel))
       self.__channels[channel_id] = channel
 
-      self.__call('Channel_SetVolumeRamp', channel, False)
-      self.__call('Channel_SetVolume', channel, c_float(volume))
+      if fade > 0:
+        self.__call('System_LockDSP', self.__fmod)
+
+        rate = c_int()
+        self.__call('System_GetSoftwareFormat', self.__fmod, byref(rate), 0, 0)
+        samples = int(rate.value * fade)
+
+        clock = c_ulonglong();
+        self.__call('Channel_GetDSPClock', channel, 0, byref(clock))
+
+        numpoints = c_int()
+        self.__call('Channel_GetFadePoints', channel, byref(numpoints), 0, 0)
+        if numpoints.value > 0:
+          self.__call('Channel_SetDelay', channel, 0, 0, False)
+          self.__call('Channel_RemoveFadePoints', channel, clock.value, clock.value + samples)
+
+        self.__call('Channel_AddFadePoint', channel, clock.value, c_float(0.0))
+        self.__call('Channel_AddFadePoint', channel, clock.value + samples, c_float(volume))
+
+        self.__call('System_UnlockDSP', self.__fmod)
+      else:
+        self.__call('Channel_SetVolumeRamp', channel, False)
+        self.__call('Channel_SetVolume', channel, c_float(volume))
 
       self.__call('System_Update', self.__fmod)
 
@@ -93,10 +114,35 @@ init python:
       if channel is None:
         return
 
-      self.__call('Channel_Stop', channel)
-      self.__channels[channel_id] = None
+      if fade > 0:
+        self.__call('System_LockDSP', self.__fmod)
+
+        rate = c_int()
+        self.__call('System_GetSoftwareFormat', self.__fmod, byref(rate), 0, 0)
+        samples = int(rate.value * fade)
+
+        volume = c_float()
+        self.__call('Channel_GetVolume', channel, byref(volume))
+
+        clock = c_ulonglong();
+        self.__call('Channel_GetDSPClock', channel, 0, byref(clock))
+
+        numpoints = c_int()
+        self.__call('Channel_GetFadePoints', channel, byref(numpoints), 0, 0)
+        if numpoints.value > 0:
+          self.__call('Channel_SetDelay', channel, 0, 0, False)
+          self.__call('Channel_RemoveFadePoints', channel, clock.value, clock.value + samples)
+
+        self.__call('Channel_AddFadePoint', channel, clock.value, volume)
+        self.__call('Channel_AddFadePoint', channel, clock.value + samples, c_float(0.0))
+        self.__call('Channel_SetDelay', channel, clock.value, clock.value + samples, True)
+
+        self.__call('System_UnlockDSP', self.__fmod)
+      else:
+        self.__call('Channel_Stop', channel)
 
       self.__call('System_Update', self.__fmod)
+      self.__channels[channel_id] = None
 
     def __call(self, fn, *args):
       """
