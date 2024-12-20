@@ -123,6 +123,32 @@ label amadeus_tests:
   $ test_suite_reset()
 
   """
+  Test - Play sample sound at a different volumes...\n
+  """
+
+  $ amadeus.play_sound("amadeus/test_files/ping.ogg", loop=True)
+
+  """
+  Test - Play sample sound at a different volumes...\n{fast}Normal...
+  """
+
+  $ amadeus.set_sound_volume(0.5)
+
+  """
+  Test - Play sample sound at a different volumes...\nNormal...{fast} Low...
+  """
+
+  $ amadeus.set_sound_volume(1.25)
+
+  """
+  Test - Play sample sound at a different volumes...\nNormal... Low...{fast} High...
+
+  Test - Play sample sound at a different volumes...\nNormal... Low...{fast} High...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
   Test - Play multiple sounds via different channels...
   """
 

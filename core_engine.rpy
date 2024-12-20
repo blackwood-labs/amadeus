@@ -150,6 +150,27 @@ init python:
       self.__call('System_Update', self.__fmod)
       self.__channels[channel_id] = None
 
+    def set_sound_volume(self, channel_id, volume):
+      """
+      Sets the sound volume on the given channel.
+
+      Args:
+        channel_id (int): The numberic ID of the channel to set the volume on.
+        volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+      """
+      if not channel_id in self.__channels:
+        return
+
+      channel = self.__channels[channel_id]
+
+      if channel is None:
+        return
+
+      self.__call('Channel_SetVolumeRamp', channel, True)
+      self.__call('Channel_SetVolume', channel, c_float(volume))
+
+      self.__call('System_Update', self.__fmod)
+
     def __call(self, fn, *args):
       """
       Makes a call to the FMOD library and validates the result was successful.
