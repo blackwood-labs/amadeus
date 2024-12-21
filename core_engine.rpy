@@ -45,6 +45,12 @@ init python:
       """
       self.__call('System_Release', self.__fmod)
 
+    def tick(self):
+      """
+      Engine tick (20Hz).
+      """
+      self.__call('System_Update', self.__fmod)
+
     def play_sound(self, filepath, channel_id, mode, volume, fade):
       """
       Plays sound from the given filepath on a specific channel.

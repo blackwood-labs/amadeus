@@ -16,11 +16,21 @@ init python:
       if not self.shutdown in config.quit_callbacks:
         config.quit_callbacks.append(self.shutdown)
 
+      # Ensure that the engine is properly shut down when reloading and exiting
+      if not self.shutdown in config.periodic_callbacks:
+        config.periodic_callbacks.append(self.tick)
+
     def shutdown(self):
       """
       Shut down the engine to free allocated resources.
       """
       self.__engine.shutdown()
+
+    def tick(self):
+      """
+      Engine tick (20Hz).
+      """
+      self.__engine.tick()
 
     def get_engine(self):
       """

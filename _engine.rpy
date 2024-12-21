@@ -15,6 +15,13 @@ init python:
       pass
 
     @abstractmethod
+    def tick(self):
+      """
+      Engine tick (20Hz).
+      """
+      pass
+
+    @abstractmethod
     def play_sound(self, filepath, channel_id, mode, volume, fade):
       """
       Plays sound from the given filepath on a specific channel.
