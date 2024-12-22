@@ -116,13 +116,14 @@ init python:
 
       self.__call('System_Update', self.__fmod)
 
-    def set_sound_volume(self, channel_id, volume):
+    def set_sound_volume(self, channel_id, volume, fade):
       """
       Sets the sound volume on the given channel.
 
       Args:
         channel_id (int): The numberic ID of the channel to set the volume on.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade.
       """
       if not channel_id in self.__channels:
         return
@@ -132,10 +133,15 @@ init python:
       if channel is None:
         return
 
-      self.__call('Channel_SetVolumeRamp', channel, True)
-      self.__call('Channel_SetVolume', channel, c_float(volume))
+      if fade > 0:
+        current_volume = c_float()
+        self.__call('Channel_GetVolume', channel, byref(current_volume))
 
-      self.__call('System_Update', self.__fmod)
+        self.__fade_channel_volume(channel, fade, current_volume.value, volume, False)
+      else:
+        self.__call('Channel_SetVolumeRamp', channel, True)
+        self.__call('Channel_SetVolume', channel, c_float(volume))
+        self.__call('System_Update', self.__fmod)
 
     def __call(self, fn, *args):
       """

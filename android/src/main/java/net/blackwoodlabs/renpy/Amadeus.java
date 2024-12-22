@@ -23,7 +23,7 @@ public class Amadeus {
 	private native void fmodTick();
 	private native void fmodPlaySound(String filepath, int channel_id, int mode, float volume, float fade);
 	private native void fmodStopSound(int channel_id, float fade);
-	private native void fmodSetSoundVolume(int channel_id, float volume);
+	private native void fmodSetSoundVolume(int channel_id, float volume, float fade);
 
 	/**
 	 * Static variable for Singleton pattern
@@ -102,8 +102,9 @@ public class Amadeus {
 	 *
     * @param channel_id The numeric ID of the channel to set the volume on.
     * @param volume Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+    * @param fade (float): Duration in seconds to fade.
 	 */
-	public void set_sound_volume(int channel_id, float volume) {
-		fmodSetSoundVolume(channel_id, volume);
+	public void set_sound_volume(int channel_id, float volume, float fade) {
+		fmodSetSoundVolume(channel_id, volume, fade);
 	}
 }

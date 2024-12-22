@@ -47,12 +47,13 @@ init python:
       pass
 
     @abstractmethod
-    def set_sound_volume(self, channel_id, volume):
+    def set_sound_volume(self, channel_id, volume, fade):
       """
       Sets the sound volume on the given channel.
 
       Args:
         channel_id (int): The numberic ID of the channel to set the volume on.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade.
       """
       pass

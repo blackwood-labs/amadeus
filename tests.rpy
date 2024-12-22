@@ -197,6 +197,24 @@ label amadeus_tests:
   $ test_suite_reset()
 
   """
+  Test - Play sound at one volume...
+  """
+
+  $ amadeus.play_sound("amadeus/test_files/loop.ogg", loop=True)
+
+  """
+  Test - Play sound at one volume...{fast} and fade down...
+  """
+
+  $ amadeus.set_sound_volume(0.25, fade=5.0)
+
+  """
+  Test - Play sound at one volume... and fade down...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
   == AMADEUS TEST SUITE COMPLETE ==
   """
 

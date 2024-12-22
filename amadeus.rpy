@@ -217,13 +217,14 @@ init python:
       for channel in self.__channel_list:
         self.stop_sound(channel['name'], fade)
 
-    def set_sound_volume(self, volume, channel=None):
+    def set_sound_volume(self, volume, channel=None, fade=0.0):
       """
       Sets the sound volume on the given channel.
 
       Args:
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
         channel (str): The channel to set the volume on (uses first registered channel if None).
+        fade (float): Duration in seconds to fade.
 
       Raises:
         ValueError: The specified channel does not exist.
@@ -233,7 +234,7 @@ init python:
 
       relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
 
-      self.__engine.set_sound_volume(channel['id'], relative_volume)
+      self.__engine.set_sound_volume(channel['id'], relative_volume, fade)
       self.save()
 
     def __get_channel(self, name):
@@ -290,7 +291,7 @@ init python:
       """
       for channel in self.__channel_list:
         if mixer == channel['mixer']:
-          self.__engine.set_sound_volume(channel['id'], volume * channel['volume'])
+          self.__engine.set_sound_volume(channel['id'], volume * channel['volume'], 0.0)
 
     def __sync_mixer_volume(self):
       """

@@ -132,9 +132,10 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound(JNIEnv
    fn_check(fmod_system->update());
 }
 
-JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(JNIEnv * env, jobject obj, jint jchannel_id, jfloat jvolume) {
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(JNIEnv * env, jobject obj, jint jchannel_id, jfloat jvolume, jfloat jfade) {
    int channel_id = (int) jchannel_id;
    float volume = (float) jvolume;
+   float fade = (float) jfade;
 
    FMOD::Channel *channel = validate_channel(channel_id);
 
@@ -142,8 +143,15 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(J
       return;
    }
 
-   fn_check(channel->setVolumeRamp(true));
-   fn_check(channel->setVolume(volume));
+   if (fade > 0) {
+      float current_volume = 0.f;
+      fn_check(channel->getVolume(&current_volume));
+
+      fade_channel_volume(channel, fade, current_volume, volume, false);
+   } else {
+      fn_check(channel->setVolumeRamp(true));
+      fn_check(channel->setVolume(volume));
+   }
 
    fn_check(fmod_system->update());
 }

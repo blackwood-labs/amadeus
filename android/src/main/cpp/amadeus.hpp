@@ -22,7 +22,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound
   (JNIEnv *, jobject, jint, jfloat);
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume
-  (JNIEnv *, jobject, jint, jfloat);
+  (JNIEnv *, jobject, jint, jfloat, jfloat);
 
 #ifdef __cplusplus
 }
