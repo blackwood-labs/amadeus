@@ -7,6 +7,7 @@
 
 FMOD::System  *fmod_system;
 FMOD::Channel *channel_list[32];
+int channel_limit = 32;
 
 void fn_check(FMOD_RESULT result) {
    if (result != FMOD_OK) {
@@ -14,8 +15,32 @@ void fn_check(FMOD_RESULT result) {
    }
 }
 
+FMOD::Channel* validate_channel(int channel_id) {
+   FMOD::Channel *channel = channel_list[channel_id];
+   if (!channel) {
+      return channel;
+   }
+
+   bool isPlaying = 0;
+   FMOD_RESULT result = channel->isPlaying(&isPlaying);
+   if (result == FMOD_ERR_INVALID_HANDLE) {
+      // Probably stopped on its own
+      channel_list[channel_id] = 0;
+      return nullptr;
+   } else {
+      fn_check(result);
+   }
+
+   if (!isPlaying) {
+      channel_list[channel_id] = 0;
+      return nullptr;
+   }
+
+   return channel;
+}
+
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodInit(JNIEnv * env, jobject obj, jint jchannel_limit, jint jversion) {
-   int channel_limit = (int) jchannel_limit;
+   channel_limit = (int) jchannel_limit;
    unsigned int version = (unsigned int) jversion;
 
    fn_check(FMOD::System_Create(&fmod_system, version));
@@ -28,6 +53,10 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodShutdown(JNIEnv 
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodTick(JNIEnv * env, jobject obj) {
    fn_check(fmod_system->update());
+
+   for (int i=0; i<channel_limit; i++) {
+      validate_channel(i);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodPlaySound(JNIEnv * env, jobject obj, jstring jfilepath, jint jchannel_id, jint jmode, jfloat jvolume, jfloat jfade) {
@@ -77,7 +106,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound(JNIEnv
    int channel_id = (int) jchannel_id;
    float fade = (float) jfade;
 
-   FMOD::Channel *channel = channel_list[channel_id];
+   FMOD::Channel *channel = validate_channel(channel_id);
 
    if (!channel) {
       return;
@@ -110,17 +139,17 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound(JNIEnv
       fn_check(fmod_system->unlockDSP());
    } else {
       fn_check(channel->stop());
+      channel_list[channel_id] = 0;
    }
 
    fn_check(fmod_system->update());
-   channel_list[channel_id] = 0;
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(JNIEnv * env, jobject obj, jint jchannel_id, jfloat jvolume) {
    int channel_id = (int) jchannel_id;
    float volume = (float) jvolume;
 
-   FMOD::Channel *channel = channel_list[channel_id];
+   FMOD::Channel *channel = validate_channel(channel_id);
 
    if (!channel) {
       return;

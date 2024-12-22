@@ -51,6 +51,9 @@ init python:
       """
       self.__call('System_Update', self.__fmod)
 
+      for channel_id in self.__channels:
+        self.__validate_channel(channel_id)
+
     def play_sound(self, filepath, channel_id, mode, volume, fade):
       """
       Plays sound from the given filepath on a specific channel.
@@ -63,7 +66,7 @@ init python:
         fade (float): Duration in seconds to fade in.
 
       Raises:
-        RuntimeError: The result of any FMOD call was not FMOD_RESULT_OK
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
       filepath = os.path.realpath(config.gamedir) + os.sep + filepath
       filepath = filepath.encode(sys.getfilesystemencoding())
@@ -110,12 +113,12 @@ init python:
         fade (float): Duration in seconds to fade out.
 
       Raises:
-        RuntimeError: The result of any FMOD call was not FMOD_RESULT_OK
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
       if not channel_id in self.__channels:
         return
 
-      channel = self.__channels[channel_id]
+      channel = self.__validate_channel(channel_id)
 
       if channel is None:
         return
@@ -146,9 +149,9 @@ init python:
         self.__call('System_UnlockDSP', self.__fmod)
       else:
         self.__call('Channel_Stop', channel)
+        self.__channels[channel_id] = None
 
       self.__call('System_Update', self.__fmod)
-      self.__channels[channel_id] = None
 
     def set_sound_volume(self, channel_id, volume):
       """
@@ -161,7 +164,7 @@ init python:
       if not channel_id in self.__channels:
         return
 
-      channel = self.__channels[channel_id]
+      channel = self.__validate_channel(channel_id)
 
       if channel is None:
         return
@@ -180,9 +183,39 @@ init python:
         args: Arguments to the function.
 
       Raises:
-        RuntimeError: The result was not FMOD_RESULT_OK
+        FMODError: The result was not FMOD_RESULT_OK
       """
       result = getattr(self.__api, 'FMOD_' + fn)(*args)
 
       if result != 0x0: # FMOD_RESULT_OK
-        raise RuntimeError('FMOD encountered an error: ' + str(result))
+        raise FMODError(result)
+
+    def __validate_channel(self, channel_id):
+      """
+      Validate that a channel is still valid and functional, and if not, kill it.
+
+      Args:
+        channel_id (int): The numberic ID of the channel to validate.
+
+      Returns:
+        The valid channel dict, or None if invalid
+      """
+      channel = self.__channels[channel_id]
+      if channel is None:
+        return None
+
+      try:
+        isPlaying = c_bool()
+        self.__call('Channel_IsPlaying', channel, byref(isPlaying))
+        if not isPlaying.value:
+          self.__channels[channel_id] = None
+          return None
+      except FMODError as err:
+        if err.result == 30: # FMOD_ERR_INVALID_HANDLE
+          # Probably stopped on its own
+          self.__channels[channel_id] = None
+          return None
+
+        raise err
+
+      return channel
