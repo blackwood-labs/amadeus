@@ -21,39 +21,30 @@ label amadeus_tests:
   """
   == BEGIN AMADEUS TEST SUITE ==
 
-  Registering channels...
+  Test - Registering channels...
   """
-
-  $ amadeus.register_channel("music", "music")
-  $ amadeus.register_channel("sound", "sfx")
-  $ amadeus.register_channel("voice", "voice")
 
   # Duplicate channel registrations are fine, and are ignored...
   $ amadeus.register_channel("music", "music")
 
-  # Test that invalid mixer causes a ValueError
-  python:
-    try:
-      amadeus.register_channel("invalid", "invalid")
-      raise RuntimeError("Failed test...")
-    except ValueError:
-      pass
+  # Test that unknown mixers can be registered
+  $ amadeus.register_channel("invalid", "invalid")
 
   # Test that too many channels causes a RuntimeError
   python:
-    orig_channels = amadeus.get_channels()
     try:
       for x in range(0, amadeus.get_channel_limit()):
         amadeus.register_channel(x, "music")
       raise RuntimeError("Failed test...")
     except RuntimeError:
       pass
+
+    # Reset to default channels
     amadeus.clear_channels()
-    for channel in orig_channels:
-      amadeus.register_channel(channel['name'], channel['mixer'])
+    amadeus.register_default_channels()
 
   """
-  Registering channels...{fast} Done!
+  Test - Registering channels...{fast} Done!
   """
 
   """

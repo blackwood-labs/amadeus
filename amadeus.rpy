@@ -5,11 +5,14 @@ init python:
     Amadeus sound engine.
     """
 
-    def __init__(self, channel_limit=8, version=0x00020299):
+    def __init__(self, channel_limit=8, version=0x00020299, default_channels=True):
       self.__channel_limit = channel_limit
       self.__channel_list = []
       self.__version = version
       self.__mixer_volume = {}
+
+      if default_channels:
+        self.register_default_channels()
 
       if renpy.android:
         # The FMOD library expects to be loaded via Android JNI
@@ -71,12 +74,8 @@ init python:
         mixer (str): The name of the Ren'Py mixer associated with the channel.
 
       Raises:
-        ValueError: The specific Ren'Py mixer does not exist.
         RuntimeError: Attempted to register more than the maximum number of channels.
       """
-      if not mixer in renpy.music.get_all_mixers():
-        raise ValueError('Unknown Ren\'Py mixer: ' + str(mixer))
-
       if len(self.__channel_list) == self.__channel_limit:
         raise RuntimeError('Exceeded maximum number of channels')
 
@@ -93,6 +92,14 @@ init python:
       }
 
       self.__channel_list.append(channel)
+
+    def register_default_channels(self):
+      """
+      Registers the default set of channels (music, sound, voice).
+      """
+      self.register_channel("sound", "sfx")
+      self.register_channel("music", "music")
+      self.register_channel("voice", "voice")
 
     def get_channels(self):
       """
