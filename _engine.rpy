@@ -57,3 +57,77 @@ init python:
         fade (float): Duration in seconds to fade.
       """
       pass
+
+    @abstractmethod
+    def load_bank(self, filepath):
+      """
+      Loads a bank file into FMOD Studio.
+
+      Args:
+        filepath (str): The path of the bank file to load.
+      """
+      pass
+
+    @abstractmethod
+    def load_event(self, name, slot_id):
+      """
+      Loads an event into memory and makes it ready for use.
+
+      Args:
+        name (str): The name of the event to load.
+        slot_id (int): The event slot to load the event into.
+      """
+      pass
+
+    @abstractmethod
+    def set_event_param(self, slot_id, key, value):
+      """
+      Sets a parameter value on an event.
+
+      Args:
+        slot_id (int): The event slot of the event to set the parameter on.
+        key (str): The parameter key.
+        value (float): The parameter value.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+      """
+      pass
+
+    @abstractmethod
+    def start_event(self, slot_id, volume):
+      """
+      Starts an event.
+
+      Args:
+        slot_id (int): The event slot of the event to start.
+        volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+      """
+      pass
+
+    @abstractmethod
+    def stop_event(self, slot_id):
+      """
+      Stops an event in the given slot.
+
+      Args:
+        slot_id (int): The event slot of the event to stop.
+      """
+      pass
+
+    @abstractmethod
+    def set_event_volume(self, slot_id, volume):
+      """
+      Sets the volume for an event in the given slot.
+
+      Args:
+        slot_id (int): The event slot of the event to set the volume for.
+        volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+      """
+      pass

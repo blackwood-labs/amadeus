@@ -8,7 +8,9 @@
 FMOD::System  *fmod_system;
 FMOD::Studio::System  *fmod_studio_system;
 FMOD::Channel *channel_list[32];
+FMOD::Studio::EventInstance *event_slots[32];
 int channel_limit = 32;
+int event_limit = 32;
 
 void fn_check(FMOD_RESULT result) {
    if (result != FMOD_OK) {
@@ -66,16 +68,17 @@ void fade_channel_volume(FMOD::Channel *channel, float time, float vol_start, fl
    fn_check(fmod_system->unlockDSP());
 }
 
-JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodInit(JNIEnv * env, jobject obj, jint jchannel_limit, jint jversion) {
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodInit(JNIEnv * env, jobject obj, jint jchannel_limit, jint jevent_limit, jint jversion) {
    channel_limit = (int) jchannel_limit;
+   event_limit = (int) jevent_limit;
    unsigned int version = (unsigned int) jversion;
 
    try {
       fn_check(FMOD::System_Create(&fmod_system, version));
-      fn_check(fmod_system->init(channel_limit, FMOD_INIT_NORMAL, 0));
+      fn_check(fmod_system->init(channel_limit + event_limit, FMOD_INIT_NORMAL, 0));
 
       fn_check(FMOD::Studio::System::create(&fmod_studio_system, version));
-      fn_check(fmod_studio_system->initialize(channel_limit, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, 0));
+      fn_check(fmod_studio_system->initialize(channel_limit + event_limit, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, 0));
    } catch (FMOD_RESULT result) {
       char buffer[50];
       sprintf(buffer, "FMOD encountered an error: %d", (int) result);
@@ -196,4 +199,28 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(J
       sprintf(buffer, "FMOD encountered an error: %d", (int) result);
       env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
    }
+}
+
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodLoadBank(JNIEnv * env, jobject obj, jstring jfilepath) {
+   //
+}
+
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodLoadEvent(JNIEnv * env, jobject obj, jstring jname, jint jslot_id) {
+   //
+}
+
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventParam(JNIEnv * env, jobject obj, jint jslot_id, jstring jkey, jfloat jvalue) {
+   //
+}
+
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume) {
+   //
+}
+
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv * env, jobject obj, jint jslot_id) {
+   //
+}
+
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume) {
+   //
 }

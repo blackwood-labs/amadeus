@@ -10,15 +10,17 @@ init python:
     Primary cross-platform engine for Amadeus.
     """
 
-    def __init__(self, channel_limit, version):
+    def __init__(self, channel_limit, event_limit, version):
       """
       Initialize FMOD.
 
       Args:
         channel_limit (int): The maximum number of channels allowed to be registered.
+        event_limit (int): The maximum number of events allowed to be run at once.
         version (int): The version of FMOD loaded via the pre-compiled libraries.
       """
       self.__channels = {}
+      self.__event_slots = {}
 
       if platform.system() == 'Windows':
         fmod_lib = 'fmod.dll'
@@ -41,11 +43,11 @@ init python:
 
       self.__fmod = c_void_p()
       self.__call('System_Create', byref(self.__fmod), version)
-      self.__call('System_Init', self.__fmod, channel_limit, 0x0, 0) # FMOD_INIT_NORMAL
+      self.__call('System_Init', self.__fmod, channel_limit + event_limit, 0x0, 0) # FMOD_INIT_NORMAL
 
       self.__fmod_studio = c_void_p()
       self.__call_studio('System_Create', byref(self.__fmod_studio), version)
-      self.__call_studio('System_Initialize', self.__fmod_studio, channel_limit, 0x0, 0x0, 0) # FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL
+      self.__call_studio('System_Initialize', self.__fmod_studio, channel_limit + event_limit, 0x0, 0x0, 0) # FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL
 
     def shutdown(self):
       """
@@ -152,6 +154,85 @@ init python:
         self.__call('Channel_SetVolumeRamp', channel, True)
         self.__call('Channel_SetVolume', channel, c_float(volume))
         self.__call('System_Update', self.__fmod)
+
+    def load_bank(self, filepath):
+      """
+      Loads a bank file into FMOD Studio.
+
+      Args:
+        filepath (str): The path of the bank file to load.
+
+      Raises:
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
+      """
+      pass
+
+    def load_event(self, name, slot_id):
+      """
+      Loads an event into memory and makes it ready for use.
+
+      Args:
+        name (str): The name of the event to load.
+        slot_id (int): The event slot to load the event into.
+
+      Raises:
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
+      """
+      pass
+
+    def set_event_param(self, slot_id, key, value):
+      """
+      Sets a parameter value on an event.
+
+      Args:
+        slot_id (int): The event slot of the event to set the parameter on.
+        key (str): The parameter key.
+        value (float): The parameter value.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
+      """
+      pass
+
+    def start_event(self, slot_id, volume):
+      """
+      Starts an event.
+
+      Args:
+        slot_id (int): The event slot of the event to start.
+        volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
+      """
+      pass
+
+    def stop_event(self, slot_id):
+      """
+      Stops an event in the given slot.
+
+      Args:
+        slot_id (int): The event slot of the event to stop.
+
+      Raises:
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
+      """
+      pass
+
+    def set_event_volume(self, slot_id, volume):
+      """
+      Sets the volume for an event in the given slot.
+
+      Args:
+        slot_id (int): The event slot of the event to set the volume for.
+        volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+      """
+      pass
 
     def __call(self, fn, *args):
       """

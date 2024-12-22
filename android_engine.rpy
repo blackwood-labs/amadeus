@@ -13,17 +13,18 @@ init python:
     Android engine for Amadeus.
     """
 
-    def __init__(self, channel_limit, version):
+    def __init__(self, channel_limit, event_limit, version):
       """
       Initialize FMOD.
 
       Args:
         channel_limit (int): The maximum number of channels allowed to be registered.
+        event_limit (int): The maximum number of events allowed to be run at once.
         version (int): The version of FMOD loaded via the pre-compiled libraries.
       """
       mainActivity = jnius.autoclass('org.renpy.android.PythonSDLActivity').mActivity
       self.__engine = jnius.autoclass('net.blackwoodlabs.renpy.Amadeus').getInstance()
-      self.__engine.init(mainActivity, channel_limit, version)
+      self.__engine.init(mainActivity, channel_limit, event_limit, version)
 
     def shutdown(self):
       """
@@ -81,3 +82,62 @@ init python:
         ValueError: The specified channel does not exist.
       """
       self.__engine.set_sound_volume(channel_id, volume, fade)
+
+    def load_bank(self, filepath):
+      """
+      Loads a bank file into FMOD Studio.
+
+      Args:
+        filepath (str): The path of the bank file to load.
+      """
+      self.__engine.load_bank(filepath)
+
+    def load_event(self, name, slot_id):
+      """
+      Loads an event into memory and makes it ready for use.
+
+      Args:
+        name (str): The name of the event to load.
+        slot_id (int): The event slot to load the event into.
+      """
+      self.__engine.load_event(name, slot_id)
+
+    def set_event_param(self, slot_id, key, value):
+      """
+      Sets a parameter value on an event.
+
+      Args:
+        slot_id (int): The event slot of the event to set the parameter on.
+        key (str): The parameter key.
+        value (float): The parameter value.
+      """
+      self.__engine.set_event_param(slot_id, key, value)
+
+    def start_event(self, slot_id, volume):
+      """
+      Starts an event.
+
+      Args:
+        slot_id (int): The event slot of the event to start.
+        volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+      """
+      self.__engine.start_event(slot_id, volume)
+
+    def stop_event(self, slot_id):
+      """
+      Stops an event in the given slot.
+
+      Args:
+        slot_id (int): The event slot of the event to stop.
+      """
+      self.__engine.stop_event(slot_id)
+
+    def set_event_volume(self, slot_id, volume):
+      """
+      Sets the volume for an event in the given slot.
+
+      Args:
+        slot_id (int): The event slot of the event to set the volume for.
+        volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+      """
+      self.__engine.set_event_volume(slot_id, volume)
