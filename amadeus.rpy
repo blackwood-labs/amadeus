@@ -375,6 +375,20 @@ init python:
 
       self.__engine.set_event_volume(event['slot_id'], relative_volume, fade)
 
+    def ensure_event_time_elapsed(self, event, time):
+      """
+      Ensures that the given event has reached the specified time.
+
+      This is useful for triggers which rely on specific timing.
+
+      Args:
+        event (str): The name of the event to set the elapsed time on.
+        time (float): The number of seconds to ensure have elapsed.
+      """
+      event = self.__get_event(event)
+
+      self.__engine.ensure_event_time_elapsed(event['slot_id'], time)
+
     def __get_channel(self, name):
       """
       Retrieves the channel with the given name.

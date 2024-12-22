@@ -368,6 +368,33 @@ init python:
 
       self.__call('System_Update', self.__fmod)
 
+    def ensure_event_time_elapsed(self, slot_id, time):
+      """
+      Ensures that the given event has reached the specified time.
+
+      Args:
+        slot_id (int): The event slot of the event to check.
+        time (float): The number of seconds to ensure have elapsed.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+      """
+      if not slot_id in self.__event_slots.keys():
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      event = self.__event_slots[slot_id]
+
+      if event == None:
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      current_position = c_int()
+      self.__call_studio('EventInstance_GetTimelinePosition', event, byref(current_position))
+
+      target_position = int(time * 1000)
+      if current_position.value < target_position:
+        self.__call_studio('EventInstance_SetTimelinePosition', event, c_long(target_position))
+        self.__call_studio('System_Update', self.__fmod_studio)
+
     def __call(self, fn, *args):
       """
       Makes a call to the FMOD library and validates the result was successful.

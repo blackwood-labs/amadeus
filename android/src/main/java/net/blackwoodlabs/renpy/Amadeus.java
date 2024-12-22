@@ -31,6 +31,7 @@ public class Amadeus {
 	private native void fmodStartEvent(int slot_id, float volume, float fade);
 	private native void fmodStopEvent(int slot_id, float fade);
 	private native void fmodSetEventVolume(int slot_id, float volume, float fade);
+	private native void fmodEnsureEventTimeElapsed(int slot_id, float time);
 
 	/**
 	 * Static variable for Singleton pattern
@@ -188,5 +189,15 @@ public class Amadeus {
 	 */
 	public void set_event_volume(int slot_id, float volume, float fade) {
 		fmodSetEventVolume(slot_id, volume, fade);
+	}
+
+	/**
+	 * Ensures that the given event has reached the specified time.
+	 *
+	 * @param slot_id The event slot of the event to check.
+	 * @param time The number of seconds to ensure have elapsed.
+	 */
+	public void ensure_event_time_elapsed(int slot_id, float time) {
+		fmodEnsureEventTimeElapsed(slot_id, time);
 	}
 }

@@ -118,6 +118,9 @@ init python:
 
       Args:
         slot_id (int): The event slot to check.
+
+      Returns:
+        True if the event is loaded, False otherwise.
       """
       return self.__engine.is_event_loaded(slot_id)
 
@@ -163,3 +166,13 @@ init python:
         fade (float): Duration in seconds to fade.
       """
       self.__engine.set_event_volume(slot_id, volume, fade)
+
+    def ensure_event_time_elapsed(self, slot_id, time):
+      """
+      Ensures that the given event has reached the specified time.
+
+      Args:
+        slot_id (int): The event slot of the event to check.
+        time (float): The number of seconds to ensure have elapsed.
+      """
+      self.__engine.ensure_event_time_elapsed(slot_id, time)

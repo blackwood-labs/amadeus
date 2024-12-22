@@ -45,6 +45,9 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume
   (JNIEnv *, jobject, jint, jfloat, jfloat);
 
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodEnsureEventTimeElapsed
+  (JNIEnv *, jobject, jint, jfloat);
+
 #ifdef __cplusplus
 }
 #endif

@@ -445,3 +445,30 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume(J
       env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
    }
 }
+
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodEnsureEventTimeElapsed(JNIEnv * env, jobject obj, jint jslot_id, jfloat jtime) {
+   int slot_id = (int) jslot_id;
+   float time = (float) jtime;
+
+   try {
+      FMOD::Studio::EventInstance *event = validate_event_slot(slot_id);
+      if (!event) {
+         char buffer[50];
+         sprintf(buffer, "Event has not been loaded: %d", slot_id);
+         env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+      }
+
+      int current_position;
+      fn_check(event->getTimelinePosition(&current_position));
+
+      int target_position = (time * 1000);
+      if (current_position < target_position) {
+         fn_check(event->setTimelinePosition(target_position));
+         fn_check(fmod_studio_system->update());
+      }
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
+}

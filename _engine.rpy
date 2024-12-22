@@ -147,3 +147,17 @@ init python:
         RuntimeError: The given event slot has not been loaded.
       """
       pass
+
+    @abstractmethod
+    def ensure_event_time_elapsed(self, slot_id, time):
+      """
+      Ensures that the given event has reached the specified time.
+
+      Args:
+        slot_id (int): The event slot of the event to check.
+        time (float): The number of seconds to ensure have elapsed.
+
+      Raises:
+        RuntimeError: The given event slot has not been loaded.
+      """
+      pass
