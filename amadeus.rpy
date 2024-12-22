@@ -437,6 +437,10 @@ init python:
         if mixer == channel['mixer']:
           self.__engine.set_sound_volume(channel['id'], volume * channel['volume'], 0.0)
 
+      for event in self.__event_slots.values():
+        if event != None and mixer == event['mixer']:
+          self.__engine.set_event_volume(event['slot_id'], volume * event['volume'])
+
     def __sync_mixer_volume(self):
       """
       Synchronize the volume of Ren'Py mixers with all associated channels.
