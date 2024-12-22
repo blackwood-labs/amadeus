@@ -90,7 +90,15 @@ init python:
       Args:
         filepath (str): The path of the bank file to load.
       """
-      self.__engine.load_bank(filepath)
+      # Assets in Android when packaged via rapt are packed such that we need
+      # to prefix each directory and file name with "x-"
+      sections = filepath.split('/');
+      for i, section in enumerate(sections):
+        sections[i] = 'x-' + sections[i]
+      filepath = '/'.join(sections)
+
+      # FMOD can find Android assets when prefixed with "file:///android_asset/"
+      self.__engine.load_bank('file:///android_asset/x-game/' + filepath)
 
     def load_event(self, name, slot_id):
       """
@@ -100,7 +108,7 @@ init python:
         name (str): The name of the event to load.
         slot_id (int): The event slot to load the event into.
       """
-      self.__engine.load_event(name, slot_id)
+      self.__engine.load_event('event:/' + name, slot_id)
 
     def set_event_param(self, slot_id, key, value):
       """

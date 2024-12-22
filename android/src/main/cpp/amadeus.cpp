@@ -202,25 +202,124 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(J
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodLoadBank(JNIEnv * env, jobject obj, jstring jfilepath) {
-   //
+   const char * filepath = env->GetStringUTFChars(jfilepath, 0);
+
+   try {
+      FMOD::Studio::Bank *bank;
+      fn_check(fmod_studio_system->loadBankFile(filepath, FMOD_STUDIO_LOAD_BANK_NORMAL, &bank)); // No need to keep reference
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodLoadEvent(JNIEnv * env, jobject obj, jstring jname, jint jslot_id) {
-   //
+   const char * name = env->GetStringUTFChars(jname, 0);
+   int slot_id = (int) jslot_id;
+
+   try {
+      FMOD::Studio::EventDescription *event;
+      FMOD::Studio::EventInstance *instance = event_slots[slot_id];
+      if (instance) {
+         return; // Already loaded
+      }
+
+      fn_check(fmod_studio_system->getEvent(name, &event));
+      fn_check(event->createInstance(&instance));
+      fn_check(fmod_studio_system->update());
+      event_slots[slot_id] = instance;
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventParam(JNIEnv * env, jobject obj, jint jslot_id, jstring jkey, jfloat jvalue) {
-   //
+   int slot_id = (int) jslot_id;
+   const char * key = env->GetStringUTFChars(jkey, 0);
+   float value = (float) jvalue;
+
+   try {
+      FMOD::Studio::EventInstance *event = event_slots[slot_id];
+      if (!event) {
+         char buffer[50];
+         sprintf(buffer, "Event has not been loaded: %d", slot_id);
+         env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+      }
+
+      fn_check(event->setParameterByName(key, value, false));
+      fn_check(fmod_studio_system->update());
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume) {
-   //
+   int slot_id = (int) jslot_id;
+   float volume = (float) jvolume;
+
+   try {
+      FMOD::Studio::EventInstance *event = event_slots[slot_id];
+      if (!event) {
+         char buffer[50];
+         sprintf(buffer, "Event has not been loaded: %d", slot_id);
+         env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+      }
+
+      fn_check(event->setVolume(volume));
+      fn_check(event->start());
+      fn_check(fmod_studio_system->update());
+
+      // Release immediately, since it holds no resources
+      fn_check(event->release());
+      fn_check(fmod_studio_system->update());
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv * env, jobject obj, jint jslot_id) {
-   //
+   int slot_id = (int) jslot_id;
+
+   try {
+      FMOD::Studio::EventInstance *event = event_slots[slot_id];
+      if (!event) {
+         return;
+      }
+
+      fn_check(event->stop(FMOD_STUDIO_STOP_ALLOWFADEOUT));
+      fn_check(fmod_studio_system->update());
+      event_slots[slot_id] = 0;
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume) {
-   //
+   int slot_id = (int) jslot_id;
+   float volume = (float) jvolume;
+
+   try {
+      FMOD::Studio::EventInstance *event = event_slots[slot_id];
+      if (!event) {
+         char buffer[50];
+         sprintf(buffer, "Event has not been loaded: %d", slot_id);
+         env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+      }
+
+      fn_check(event->setVolume(volume));
+      fn_check(fmod_studio_system->update());
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }

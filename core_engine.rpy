@@ -165,7 +165,11 @@ init python:
       Raises:
         FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      filepath = os.path.realpath(config.gamedir) + os.sep + filepath
+      filepath = filepath.encode(sys.getfilesystemencoding())
+
+      bank_file = c_void_p()
+      self.__call_studio('System_LoadBankFile', self.__fmod_studio, filepath, 0x0, byref(bank_file)) # FMOD_STUDIO_LOAD_BANK_NORMAL
 
     def load_event(self, name, slot_id):
       """
@@ -178,7 +182,20 @@ init python:
       Raises:
         FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      if slot_id in self.__event_slots:
+        event = self.__event_slots[slot_id]
+        if event is not None:
+          return # Already loaded
+
+      target = ("event:/" + name).encode(sys.getfilesystemencoding())
+
+      event = c_void_p()
+      self.__call_studio('System_GetEvent', self.__fmod_studio, target, byref(event))
+
+      instance = c_void_p()
+      self.__call_studio('EventDescription_CreateInstance', event, byref(instance))
+      self.__call_studio('System_Update', self.__fmod_studio)
+      self.__event_slots[slot_id] = instance
 
     def set_event_param(self, slot_id, key, value):
       """
@@ -193,7 +210,17 @@ init python:
         RuntimeError: The given event slot has not been loaded.
         FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      if not slot_id in self.__event_slots:
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      event = self.__event_slots[slot_id]
+
+      if event == None:
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      target = key.encode(sys.getfilesystemencoding())
+      self.__call_studio('EventInstance_SetParameterByName', event, target, c_float(value), False)
+      self.__call_studio('System_Update', self.__fmod_studio)
 
     def start_event(self, slot_id, volume):
       """
@@ -207,7 +234,21 @@ init python:
         RuntimeError: The given event slot has not been loaded.
         FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      if not slot_id in self.__event_slots:
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      event = self.__event_slots[slot_id]
+
+      if event == None:
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      self.__call_studio('EventInstance_SetVolume', event, c_float(volume))
+      self.__call_studio('EventInstance_Start', event)
+      self.__call_studio('System_Update', self.__fmod_studio)
+
+      # Release immediately, since it holds no resources
+      self.__call_studio('EventInstance_Release', event)
+      self.__call_studio('System_Update', self.__fmod_studio)
 
     def stop_event(self, slot_id):
       """
@@ -219,7 +260,17 @@ init python:
       Raises:
         FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      if not slot_id in self.__event_slots:
+        return
+
+      event = self.__event_slots[slot_id]
+
+      if event == None:
+        return
+
+      self.__call_studio('EventInstance_Stop', event)
+      self.__call_studio('System_Update', self.__fmod_studio)
+      self.__event_slots[slot_id] = None
 
     def set_event_volume(self, slot_id, volume):
       """
@@ -231,8 +282,18 @@ init python:
 
       Raises:
         RuntimeError: The given event slot has not been loaded.
+        FMODError: The result of any FMOD call was not FMOD_RESULT_OK
       """
-      pass
+      if not slot_id in self.__event_slots.keys():
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      event = self.__event_slots[slot_id]
+
+      if event == None:
+        raise RuntimeError('Event has not been loaded: ' + str(slot_id))
+
+      self.__call_studio('EventInstance_SetVolume', event, c_float(volume))
+      self.__call_studio('System_Update', self.__fmod_studio)
 
     def __call(self, fn, *args):
       """
