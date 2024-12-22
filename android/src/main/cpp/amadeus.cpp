@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 #include "fmod.hpp"
+#include "fmod_studio.hpp"
 #include "amadeus.hpp"
 
 FMOD::System  *fmod_system;
+FMOD::Studio::System  *fmod_studio_system;
 FMOD::Channel *channel_list[32];
 int channel_limit = 32;
 
@@ -71,6 +73,9 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodInit(JNIEnv * en
    try {
       fn_check(FMOD::System_Create(&fmod_system, version));
       fn_check(fmod_system->init(channel_limit, FMOD_INIT_NORMAL, 0));
+
+      fn_check(FMOD::Studio::System::create(&fmod_studio_system, version));
+      fn_check(fmod_studio_system->initialize(channel_limit, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, 0));
    } catch (FMOD_RESULT result) {
       char buffer[50];
       sprintf(buffer, "FMOD encountered an error: %d", (int) result);
@@ -80,6 +85,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodInit(JNIEnv * en
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodShutdown(JNIEnv * env, jobject obj) {
    try {
+      fn_check(fmod_studio_system->release());
       fn_check(fmod_system->release());
    } catch (FMOD_RESULT result) {
       char buffer[50];
@@ -90,6 +96,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodShutdown(JNIEnv 
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodTick(JNIEnv * env, jobject obj) {
    try {
+      fn_check(fmod_studio_system->update());
       fn_check(fmod_system->update());
 
       for (int i=0; i<channel_limit; i++) {

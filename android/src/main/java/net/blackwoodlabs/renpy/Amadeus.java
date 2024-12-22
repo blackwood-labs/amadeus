@@ -35,6 +35,7 @@ public class Amadeus {
 	 */
 	private Amadeus() {
 		System.loadLibrary("fmod");
+		System.loadLibrary("fmodstudio");
 		System.loadLibrary("amadeus");
 	}
 

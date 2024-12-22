@@ -9,3 +9,11 @@ set_target_properties(
   INTERFACE_INCLUDE_DIRECTORIES "${SRC_ROOT}/main/libfmod/inc"
 )
 target_link_libraries( amadeus fmod )
+
+add_library( fmod_studio SHARED IMPORTED )
+set_target_properties(
+  fmod_studio PROPERTIES
+  IMPORTED_LOCATION "${SRC_ROOT}/main/libfmod/${ANDROID_ABI}/libfmodstudio.so"
+  INTERFACE_INCLUDE_DIRECTORIES "${SRC_ROOT}/main/libfmod/inc"
+)
+target_link_libraries( amadeus fmod_studio )

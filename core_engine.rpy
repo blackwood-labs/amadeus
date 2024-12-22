@@ -22,33 +22,43 @@ init python:
 
       if platform.system() == 'Windows':
         fmod_lib = 'fmod.dll'
+        fmod_studio_lib = 'fmodstudio.dll'
       elif platform.system() == 'Linux':
         fmod_lib = 'libfmod.so'
+        fmod_studio_lib = 'libfmodstudio.so'
       elif platform.system() == 'Darwin':
         arch = platform.architecture()[0]
         if arch == '32bit':
           # There is no 32 bit FMOD library for Mac OS
           raise RuntimeError('32-bit architecture for Mac OS is not supported')
         fmod_lib = 'libfmod.dylib'
+        fmod_studio_lib = 'libfmodstudio.dylib'
       else:
         raise RuntimeError('Operating system is not supported')
 
       self.__api = CDLL(os.path.realpath(config.gamedir) + '/amadeus/lib/' + fmod_lib)
+      self.__studio_api = CDLL(os.path.realpath(config.gamedir) + '/amadeus/lib/' + fmod_studio_lib)
 
       self.__fmod = c_void_p()
       self.__call('System_Create', byref(self.__fmod), version)
       self.__call('System_Init', self.__fmod, channel_limit, 0x0, 0) # FMOD_INIT_NORMAL
 
+      self.__fmod_studio = c_void_p()
+      self.__call_studio('System_Create', byref(self.__fmod_studio), version)
+      self.__call_studio('System_Initialize', self.__fmod_studio, channel_limit, 0x0, 0x0, 0) # FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL
+
     def shutdown(self):
       """
       Shut down the engine to free allocated resources.
       """
+      self.__call_studio('System_Release', self.__fmod_studio)
       self.__call('System_Release', self.__fmod)
 
     def tick(self):
       """
       Engine tick (20Hz).
       """
+      self.__call_studio('System_Update', self.__fmod_studio)
       self.__call('System_Update', self.__fmod)
 
       for channel_id in self.__channels:
@@ -155,6 +165,22 @@ init python:
         FMODError: The result was not FMOD_RESULT_OK
       """
       result = getattr(self.__api, 'FMOD_' + fn)(*args)
+
+      if result != 0x0: # FMOD_RESULT_OK
+        raise FMODError(result)
+
+    def __call_studio(self, fn, *args):
+      """
+      Makes a call to the FMOD Studio library and validates the result was successful.
+
+      Args:
+        fn (string): The function name to call.
+        args: Arguments to the function.
+
+      Raises:
+        FMODError: The result was not FMOD_RESULT_OK
+      """
+      result = getattr(self.__studio_api, "FMOD_Studio_" + fn)(*args)
 
       if result != 0x0: # FMOD_RESULT_OK
         raise FMODError(result)
