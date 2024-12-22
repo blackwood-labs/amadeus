@@ -313,54 +313,63 @@ init python:
       for i, key in enumerate(keys):
         self.__engine.set_event_param(event['slot_id'], key, values[i])
 
-    def start_event(self, name, volume=1.0):
+    def start_event(self, name, volume=1.0, fade=0.0):
       """
       Starts an event.
 
       Args:
         name (str): The name of the event to start.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade in.
       """
       event = self.__get_event(name)
 
       relative_volume = volume * self.__get_mixer_volume(event['mixer'])
 
-      self.__engine.start_event(event['slot_id'], relative_volume)
+      self.__engine.start_event(event['slot_id'], relative_volume, fade)
 
-    def stop_event(self, name):
+    def stop_event(self, name, fade=0.0):
       """
       Stops an event.
 
       Args:
         name (str): The name of the event to stop.
+        fade (float): Duration in seconds to fade out.
       """
       event = self.__get_event(name)
-      self.__engine.stop_event(event['slot_id'])
-      self.__event_slots[event['slot_id']] = None
+      self.__engine.stop_event(event['slot_id'], fade)
+      if fade == 0.0:
+        # Only remove event reference when not fading
+        # Allows a later hard stop after starting a fade if needed
+        self.__event_slots[event['slot_id']] = None
 
-    def stop_all_events(self):
+    def stop_all_events(self, fade=0.0):
       """
       Stops all events.
+
+      Args:
+        fade (float): Duration in seconds to fade out.
       """
       for event in self.__event_slots.values():
         if event != None:
-          self.__engine.stop_event(event['slot_id'])
+          self.__engine.stop_event(event['slot_id'], fade)
           self.__event_slots[event['slot_id']] = None
 
-    def set_event_volume(self, event, volume):
+    def set_event_volume(self, event, volume, fade=0.0):
       """
       Sets the sound volume on the given event.
 
       Args:
         name (str): The name of the event to set the volume on.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade.
       """
       event = self.__get_event(event)
       event['volume'] = volume
 
       relative_volume = volume * self.__get_mixer_volume(event['mixer'])
 
-      self.__engine.set_event_volume(event['slot_id'], relative_volume)
+      self.__engine.set_event_volume(event['slot_id'], relative_volume, fade)
 
     def __get_channel(self, name):
       """
@@ -439,7 +448,7 @@ init python:
 
       for event in self.__event_slots.values():
         if event != None and mixer == event['mixer']:
-          self.__engine.set_event_volume(event['slot_id'], volume * event['volume'])
+          self.__engine.set_event_volume(event['slot_id'], volume * event['volume'], 0.0)
 
     def __sync_mixer_volume(self):
       """

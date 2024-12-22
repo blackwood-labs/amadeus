@@ -222,13 +222,14 @@ init python:
       self.__call_studio('EventInstance_SetParameterByName', event, target, c_float(value), False)
       self.__call_studio('System_Update', self.__fmod_studio)
 
-    def start_event(self, slot_id, volume):
+    def start_event(self, slot_id, volume, fade):
       """
       Starts an event.
 
       Args:
         slot_id (int): The event slot of the event to start.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade in.
 
       Raises:
         RuntimeError: The given event slot has not been loaded.
@@ -242,7 +243,9 @@ init python:
       if event == None:
         raise RuntimeError('Event has not been loaded: ' + str(slot_id))
 
-      self.__call_studio('EventInstance_SetVolume', event, c_float(volume))
+      # Always set the event itself to full volume
+      # We will manipulate the underlying channel volume instead
+      self.__call_studio('EventInstance_SetVolume', event, c_float(1.0))
       self.__call_studio('EventInstance_Start', event)
       self.__call_studio('System_Update', self.__fmod_studio)
 
@@ -250,12 +253,28 @@ init python:
       self.__call_studio('EventInstance_Release', event)
       self.__call_studio('System_Update', self.__fmod_studio)
 
-    def stop_event(self, slot_id):
+      # Wait for event to fully start
+      state = c_int(99)
+      while state.value != 0: # FMOD_STUDIO_PLAYBACK_PLAYING
+        self.__call_studio('EventInstance_GetPlaybackState', event, byref(state))
+
+      channel = c_void_p()
+      self.__call_studio('EventInstance_GetChannelGroup', event, byref(channel))
+
+      if fade > 0:
+        self.__fade_channel_volume(channel, fade, 0.0, volume, False)
+      else:
+        self.__call('Channel_SetVolumeRamp', channel, False)
+        self.__call('Channel_SetVolume', channel, c_float(volume))
+      self.__call('System_Update', self.__fmod)
+
+    def stop_event(self, slot_id, fade):
       """
       Stops an event in the given slot.
 
       Args:
         slot_id (int): The event slot of the event to stop.
+        fade (float): Duration in seconds to fade out.
 
       Raises:
         FMODError: The result of any FMOD call was not FMOD_RESULT_OK
@@ -268,17 +287,28 @@ init python:
       if event == None:
         return
 
-      self.__call_studio('EventInstance_Stop', event)
-      self.__call_studio('System_Update', self.__fmod_studio)
-      self.__event_slots[slot_id] = None
+      if fade > 0:
+        channel = c_void_p()
+        self.__call_studio('EventInstance_GetChannelGroup', event, byref(channel))
 
-    def set_event_volume(self, slot_id, volume):
+        volume = c_float()
+        self.__call('Channel_GetVolume', channel, byref(volume))
+
+        self.__fade_channel_volume(channel, fade, volume.value, 0.0, True)
+        self.__call('System_Update', self.__fmod)
+      else:
+        self.__call_studio('EventInstance_Stop', event)
+        self.__call_studio('System_Update', self.__fmod_studio)
+        self.__event_slots[slot_id] = None
+
+    def set_event_volume(self, slot_id, volume, fade):
       """
       Sets the volume for an event in the given slot.
 
       Args:
         slot_id (int): The event slot of the event to set the volume for.
         volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+        fade (float): Duration in seconds to fade.
 
       Raises:
         RuntimeError: The given event slot has not been loaded.
@@ -292,8 +322,24 @@ init python:
       if event == None:
         raise RuntimeError('Event has not been loaded: ' + str(slot_id))
 
-      self.__call_studio('EventInstance_SetVolume', event, c_float(volume))
-      self.__call_studio('System_Update', self.__fmod_studio)
+      state = c_int()
+      self.__call_studio('EventInstance_GetPlaybackState', event, byref(state))
+      if state.value != 0: # FMOD_STUDIO_PLAYBACK_PLAYING
+        return # Tried to change volume on dead event
+
+      channel = c_void_p()
+      self.__call_studio('EventInstance_GetChannelGroup', event, byref(channel))
+
+      if fade > 0:
+        current_volume = c_float()
+        self.__call('Channel_GetVolume', channel, byref(current_volume))
+
+        self.__fade_channel_volume(channel, fade, current_volume.value, volume, False)
+      else:
+        self.__call('Channel_SetVolumeRamp', channel, False)
+        self.__call('Channel_SetVolume', channel, c_float(volume))
+
+      self.__call('System_Update', self.__fmod)
 
     def __call(self, fn, *args):
       """

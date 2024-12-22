@@ -95,13 +95,14 @@ init python:
       pass
 
     @abstractmethod
-    def start_event(self, slot_id, volume):
+    def start_event(self, slot_id, volume, fade):
       """
       Starts an event.
 
       Args:
         slot_id (int): The event slot of the event to start.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade in.
 
       Raises:
         RuntimeError: The given event slot has not been loaded.
@@ -109,23 +110,25 @@ init python:
       pass
 
     @abstractmethod
-    def stop_event(self, slot_id):
+    def stop_event(self, slot_id, fade):
       """
       Stops an event in the given slot.
 
       Args:
         slot_id (int): The event slot of the event to stop.
+        fade (float): Duration in seconds to fade out.
       """
       pass
 
     @abstractmethod
-    def set_event_volume(self, slot_id, volume):
+    def set_event_volume(self, slot_id, volume, fade):
       """
       Sets the volume for an event in the given slot.
 
       Args:
         slot_id (int): The event slot of the event to set the volume for.
         volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+        fade (float): Duration in seconds to fade.
 
       Raises:
         RuntimeError: The given event slot has not been loaded.

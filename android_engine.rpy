@@ -121,31 +121,34 @@ init python:
       """
       self.__engine.set_event_param(slot_id, key, value)
 
-    def start_event(self, slot_id, volume):
+    def start_event(self, slot_id, volume, fade):
       """
       Starts an event.
 
       Args:
         slot_id (int): The event slot of the event to start.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade in.
       """
-      self.__engine.start_event(slot_id, volume)
+      self.__engine.start_event(slot_id, volume, fade)
 
-    def stop_event(self, slot_id):
+    def stop_event(self, slot_id, fade):
       """
       Stops an event in the given slot.
 
       Args:
         slot_id (int): The event slot of the event to stop.
+        fade (float): Duration in seconds to fade out.
       """
-      self.__engine.stop_event(slot_id)
+      self.__engine.stop_event(slot_id, fade)
 
-    def set_event_volume(self, slot_id, volume):
+    def set_event_volume(self, slot_id, volume, fade):
       """
       Sets the volume for an event in the given slot.
 
       Args:
         slot_id (int): The event slot of the event to set the volume for.
         volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+        fade (float): Duration in seconds to fade.
       """
-      self.__engine.set_event_volume(slot_id, volume)
+      self.__engine.set_event_volume(slot_id, volume, fade)

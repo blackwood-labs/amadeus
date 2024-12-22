@@ -27,9 +27,9 @@ public class Amadeus {
 	private native void fmodLoadBank(String filepath);
 	private native void fmodLoadEvent(String name, int slot_id);
 	private native void fmodSetEventParam(int slot_id, String key, float value);
-	private native void fmodStartEvent(int slot_id, float volume);
-	private native void fmodStopEvent(int slot_id);
-	private native void fmodSetEventVolume(int slot_id, float volume);
+	private native void fmodStartEvent(int slot_id, float volume, float fade);
+	private native void fmodStopEvent(int slot_id, float fade);
+	private native void fmodSetEventVolume(int slot_id, float volume, float fade);
 
 	/**
 	 * Static variable for Singleton pattern
@@ -151,18 +151,20 @@ public class Amadeus {
 	 *
 	 * @param slot_id The event slot of the event to start.
 	 * @param volume Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+	 * @param fade Duration in seconds to fade in.
 	 */
-	public void start_event(int slot_id, float volume) {
-		fmodStartEvent(slot_id, volume);
+	public void start_event(int slot_id, float volume, float fade) {
+		fmodStartEvent(slot_id, volume, fade);
 	}
 
 	/**
 	 * Stops an event in the given slot.
 	 *
 	 * @param slot_id The event slot of the event to stop.
+	 * @param fade Duration in seconds to fade out.
 	 */
-	public void stop_event(int slot_id) {
-		fmodStopEvent(slot_id);
+	public void stop_event(int slot_id, float fade) {
+		fmodStopEvent(slot_id, fade);
 	}
 
 	/**
@@ -170,8 +172,9 @@ public class Amadeus {
 	 *
 	 * @param slot_id The event slot of the event to set the volume for.
 	 * @param volume Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+	 * @param fade Duration in seconds to fade.
 	 */
-	public void set_event_volume(int slot_id, float volume) {
-		fmodSetEventVolume(slot_id, volume);
+	public void set_event_volume(int slot_id, float volume, float fade) {
+		fmodSetEventVolume(slot_id, volume, fade);
 	}
 }

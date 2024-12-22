@@ -42,7 +42,7 @@ FMOD::Channel* validate_channel(int channel_id) {
    return channel;
 }
 
-void fade_channel_volume(FMOD::Channel *channel, float time, float vol_start, float vol_end, bool close) {
+void fade_channel_volume(FMOD::ChannelControl *channel, float time, float vol_start, float vol_end, bool close) {
    fn_check(fmod_system->lockDSP());
 
    int rate = 0;
@@ -258,9 +258,10 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventParam(JN
    }
 }
 
-JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume) {
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume, jfloat jfade) {
    int slot_id = (int) jslot_id;
    float volume = (float) jvolume;
+   float fade = (float) jfade;
 
    try {
       FMOD::Studio::EventInstance *event = event_slots[slot_id];
@@ -270,13 +271,33 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent(JNIEn
          env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
       }
 
-      fn_check(event->setVolume(volume));
+      // Always set the event itself to full volume
+      // We will manipulate the underlying channel volume instead
+      fn_check(event->setVolume(1.f));
       fn_check(event->start());
       fn_check(fmod_studio_system->update());
 
       // Release immediately, since it holds no resources
       fn_check(event->release());
       fn_check(fmod_studio_system->update());
+
+      // Wait for event to fully start
+      FMOD_STUDIO_PLAYBACK_STATE state = FMOD_STUDIO_PLAYBACK_STARTING;
+      while (state != FMOD_STUDIO_PLAYBACK_PLAYING) {
+         fn_check(event->getPlaybackState(&state));
+      }
+
+      FMOD::ChannelGroup *channel;
+      fn_check(event->getChannelGroup(&channel));
+
+      if (fade > 0) {
+         fade_channel_volume(channel, fade, 0.f, volume, false);
+      } else {
+         fn_check(channel->setVolumeRamp(false));
+         fn_check(channel->setVolume(volume));
+      }
+
+      fn_check(fmod_system->update());
    } catch (FMOD_RESULT result) {
       char buffer[50];
       sprintf(buffer, "FMOD encountered an error: %d", (int) result);
@@ -284,8 +305,9 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent(JNIEn
    }
 }
 
-JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv * env, jobject obj, jint jslot_id) {
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv * env, jobject obj, jint jslot_id, jfloat jfade) {
    int slot_id = (int) jslot_id;
+   float fade = (float) jfade;
 
    try {
       FMOD::Studio::EventInstance *event = event_slots[slot_id];
@@ -293,9 +315,20 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv
          return;
       }
 
-      fn_check(event->stop(FMOD_STUDIO_STOP_ALLOWFADEOUT));
-      fn_check(fmod_studio_system->update());
-      event_slots[slot_id] = 0;
+      if (fade > 0) {
+         FMOD::ChannelGroup *channel;
+         fn_check(event->getChannelGroup(&channel));
+
+         float volume;
+         fn_check(channel->getVolume(&volume));
+
+         fade_channel_volume(channel, fade, volume, 0.f, true);
+         fn_check(fmod_system->update());
+      } else {
+         fn_check(event->stop(FMOD_STUDIO_STOP_ALLOWFADEOUT));
+         fn_check(fmod_studio_system->update());
+         event_slots[slot_id] = 0;
+      }
    } catch (FMOD_RESULT result) {
       char buffer[50];
       sprintf(buffer, "FMOD encountered an error: %d", (int) result);
@@ -303,9 +336,10 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv
    }
 }
 
-JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume) {
+JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume(JNIEnv * env, jobject obj, jint jslot_id, jfloat jvolume, jfloat jfade) {
    int slot_id = (int) jslot_id;
    float volume = (float) jvolume;
+   float fade = (float) jfade;
 
    try {
       FMOD::Studio::EventInstance *event = event_slots[slot_id];
@@ -315,8 +349,26 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume(J
          env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
       }
 
-      fn_check(event->setVolume(volume));
-      fn_check(fmod_studio_system->update());
+      FMOD_STUDIO_PLAYBACK_STATE state;
+      fn_check(event->getPlaybackState(&state));
+      if (state != FMOD_STUDIO_PLAYBACK_PLAYING) {
+         return; // Tried to change volume on an unstarted or dead event
+      }
+
+      FMOD::ChannelGroup *channel;
+      fn_check(event->getChannelGroup(&channel));
+
+      if (fade > 0) {
+         float current_volume;
+         fn_check(channel->getVolume(&current_volume));
+
+         fade_channel_volume(channel, fade, current_volume, volume, false);
+      } else {
+         fn_check(channel->setVolumeRamp(false));
+         fn_check(channel->setVolume(volume));
+      }
+
+      fn_check(fmod_system->update());
    } catch (FMOD_RESULT result) {
       char buffer[50];
       sprintf(buffer, "FMOD encountered an error: %d", (int) result);

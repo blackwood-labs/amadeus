@@ -34,13 +34,13 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventParam
   (JNIEnv *, jobject, jint, jstring, jfloat);
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent
-  (JNIEnv *, jobject, jint, jfloat);
+  (JNIEnv *, jobject, jint, jfloat, jfloat);
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent
-  (JNIEnv *, jobject, jint);
+  (JNIEnv *, jobject, jint, jfloat);
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume
-  (JNIEnv *, jobject, jint, jfloat);
+  (JNIEnv *, jobject, jint, jfloat, jfloat);
 
 #ifdef __cplusplus
 }
