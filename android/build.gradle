@@ -1,0 +1,54 @@
+apply plugin: 'com.android.library'
+
+def src_root=project.file('src').absolutePath
+
+android {
+    compileSdkVersion 33
+    ndkVersion "21.3.6528147"
+
+    defaultConfig {
+        minSdkVersion 19
+        targetSdkVersion 33
+        versionCode 1
+        versionName "1.0"
+
+        externalNativeBuild {
+            cmake {
+                cppFlags '-std=c++11'
+                arguments '-DSRC_ROOT=' + src_root
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+             path 'CMakeLists.txt'
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            packagingOptions {
+               doNotStrip '**/*.so'
+           }
+        }
+
+        release {
+            minifyEnabled false
+            packagingOptions {
+               doNotStrip '**/*.so'
+           }
+        }
+    }
+
+}
+
+
+dependencies {
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.google.android.play:core:1.10.0'
+    implementation 'org.slf4j:slf4j-api:1.7.25'
+    implementation 'uk.uuid.slf4j:slf4j-android:1.7.25-1'
+    implementation files('src/main/libfmod/fmod.jar')
+}
