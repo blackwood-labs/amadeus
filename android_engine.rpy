@@ -22,6 +22,8 @@ init python:
         event_limit (int): The maximum number of events allowed to be run at once.
         version (int): The version of FMOD loaded via the pre-compiled libraries.
       """
+      self.__event_limit = event_limit;
+
       mainActivity = jnius.autoclass('org.renpy.android.PythonSDLActivity').mActivity
       self.__engine = jnius.autoclass('net.blackwoodlabs.renpy.Amadeus').getInstance()
       self.__engine.init(mainActivity, channel_limit, event_limit, version)
@@ -109,6 +111,15 @@ init python:
         slot_id (int): The event slot to load the event into.
       """
       self.__engine.load_event('event:/' + name, slot_id)
+
+    def is_event_loaded(self, slot_id):
+      """
+      Checks if the event in the specified slot is currently loaded.
+
+      Args:
+        slot_id (int): The event slot to check.
+      """
+      return self.__engine.is_event_loaded(slot_id)
 
     def set_event_param(self, slot_id, key, value):
       """

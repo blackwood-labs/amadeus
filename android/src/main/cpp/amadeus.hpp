@@ -30,6 +30,9 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodLoadBank
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodLoadEvent
   (JNIEnv *, jobject, jstring, jint);
 
+JNIEXPORT bool JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodIsEventLoaded
+  (JNIEnv *, jobject, jint);
+
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventParam
   (JNIEnv *, jobject, jint, jstring, jfloat);
 

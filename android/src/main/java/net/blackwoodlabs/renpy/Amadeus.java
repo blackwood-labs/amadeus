@@ -19,6 +19,7 @@ public class Amadeus {
 	// Native function declarations
 
 	private native void fmodInit(int channel_limit, int event_limit, int version);
+	private native boolean fmodIsEventLoaded(int slot_id);
 	private native void fmodShutdown();
 	private native void fmodTick();
 	private native void fmodPlaySound(String filepath, int channel_id, int mode, float volume, float fade);
@@ -133,6 +134,17 @@ public class Amadeus {
 	 */
 	public void load_event(String name, int slot_id) {
 		fmodLoadEvent(name, slot_id);
+	}
+
+	/**
+	 * Checks if the event in the specified slot is currently loaded.
+	 *
+	 * @param slot_id The event slot to check.
+	 *
+	 * @return True if the event is loaded, False otherwise.
+	 */
+	public boolean is_event_loaded(int slot_id) {
+		return fmodIsEventLoaded(slot_id);
 	}
 
 	/**

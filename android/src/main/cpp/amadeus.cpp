@@ -9,6 +9,7 @@ FMOD::System  *fmod_system;
 FMOD::Studio::System  *fmod_studio_system;
 FMOD::Channel *channel_list[32];
 FMOD::Studio::EventInstance *event_slots[32];
+FMOD::ChannelControl *event_channels[32];
 int channel_limit = 32;
 int event_limit = 32;
 
@@ -40,6 +41,44 @@ FMOD::Channel* validate_channel(int channel_id) {
    }
 
    return channel;
+}
+
+FMOD::Studio::EventInstance* validate_event_slot(int slot_id) {
+   FMOD::Studio::EventInstance *event = event_slots[slot_id];
+   if (!event) {
+      return event;
+   }
+
+   FMOD::ChannelControl *channel = event_channels[slot_id];
+   if (!channel) {
+      return event;
+   }
+
+   bool is_playing = 0;
+   FMOD_RESULT result = channel->isPlaying(&is_playing);
+   if (result != FMOD_OK) {
+      if (result != FMOD_ERR_INVALID_HANDLE) {
+         fn_check(result); // Something else went wrong, handle it
+      }
+
+      // Channel is unavailable, kill the event
+      fn_check(event->stop(FMOD_STUDIO_STOP_ALLOWFADEOUT));
+      fn_check(fmod_studio_system->update());
+      event_slots[slot_id] = 0;
+      event_channels[slot_id] = 0;
+      return nullptr;
+   }
+
+   // Channel has stopped playing, assume the event has stopped and kill it
+   if (!is_playing) {
+      fn_check(event->stop(FMOD_STUDIO_STOP_ALLOWFADEOUT));
+      fn_check(fmod_studio_system->update());
+      event_slots[slot_id] = 0;
+      event_channels[slot_id] = 0;
+      return nullptr;
+   }
+
+   return event;
 }
 
 void fade_channel_volume(FMOD::ChannelControl *channel, float time, float vol_start, float vol_end, bool close) {
@@ -104,6 +143,10 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodTick(JNIEnv * en
 
       for (int i=0; i<channel_limit; i++) {
          validate_channel(i);
+      }
+
+      for (int i=0; i<event_limit; i++) {
+         validate_event_slot(i);
       }
    } catch (FMOD_RESULT result) {
       char buffer[50];
@@ -229,6 +272,24 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodLoadEvent(JNIEnv
       fn_check(event->createInstance(&instance));
       fn_check(fmod_studio_system->update());
       event_slots[slot_id] = instance;
+      event_channels[slot_id] = 0;
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
+}
+
+JNIEXPORT bool JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodIsEventLoaded(JNIEnv * env, jobject obj, jint jslot_id) {
+   int slot_id = (int) jslot_id;
+
+   try {
+      FMOD::Studio::EventInstance *event = validate_event_slot(slot_id);
+      if (event) {
+         return true;
+      }
+
+      return false;
    } catch (FMOD_RESULT result) {
       char buffer[50];
       sprintf(buffer, "FMOD encountered an error: %d", (int) result);
@@ -242,7 +303,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventParam(JN
    float value = (float) jvalue;
 
    try {
-      FMOD::Studio::EventInstance *event = event_slots[slot_id];
+      FMOD::Studio::EventInstance *event = validate_event_slot(slot_id);
       if (!event) {
          char buffer[50];
          sprintf(buffer, "Event has not been loaded: %d", slot_id);
@@ -290,6 +351,14 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStartEvent(JNIEn
       FMOD::ChannelGroup *channel;
       fn_check(event->getChannelGroup(&channel));
 
+      // Wait for channel to start playing
+      bool is_playing = 0;
+      while (!is_playing) {
+         fn_check(channel->isPlaying(&is_playing));
+      }
+
+      event_channels[slot_id] = channel;
+
       if (fade > 0) {
          fade_channel_volume(channel, fade, 0.f, volume, false);
       } else {
@@ -310,7 +379,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv
    float fade = (float) jfade;
 
    try {
-      FMOD::Studio::EventInstance *event = event_slots[slot_id];
+      FMOD::Studio::EventInstance *event = validate_event_slot(slot_id);
       if (!event) {
          return;
       }
@@ -328,6 +397,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopEvent(JNIEnv
          fn_check(event->stop(FMOD_STUDIO_STOP_ALLOWFADEOUT));
          fn_check(fmod_studio_system->update());
          event_slots[slot_id] = 0;
+         event_channels[slot_id] = 0;
       }
    } catch (FMOD_RESULT result) {
       char buffer[50];
@@ -342,7 +412,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetEventVolume(J
    float fade = (float) jfade;
 
    try {
-      FMOD::Studio::EventInstance *event = event_slots[slot_id];
+      FMOD::Studio::EventInstance *event = validate_event_slot(slot_id);
       if (!event) {
          char buffer[50];
          sprintf(buffer, "Event has not been loaded: %d", slot_id);

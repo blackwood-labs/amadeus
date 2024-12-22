@@ -80,6 +80,19 @@ init python:
       pass
 
     @abstractmethod
+    def is_event_loaded(self, slot_id):
+      """
+      Checks if the event in the specified slot is currently loaded.
+
+      Args:
+        slot_id (int): The event slot to check.
+
+      Returns:
+        True if the event is loaded, False otherwise.
+      """
+      pass
+
+    @abstractmethod
     def set_event_param(self, slot_id, key, value):
       """
       Sets a parameter value on an event.

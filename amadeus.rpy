@@ -86,6 +86,10 @@ init python:
       self.__engine.tick()
       self.__sync_mixer_volume()
 
+      for i in self.__event_slots:
+        if not self.__engine.is_event_loaded(i):
+          self.__event_slots[i] = None # Stopped at some point, kill it
+
     def get_engine(self):
       """
       Accessor to get the active engine.

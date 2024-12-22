@@ -21,6 +21,7 @@ init python:
       """
       self.__channels = {}
       self.__event_slots = {}
+      self.__event_channels = {}
 
       if platform.system() == 'Windows':
         fmod_lib = 'fmod.dll'
@@ -65,6 +66,9 @@ init python:
 
       for channel_id in self.__channels:
         self.__validate_channel(channel_id)
+
+      for slot_id in self.__event_slots.keys():
+        self.__validate_event(slot_id)
 
     def play_sound(self, filepath, channel_id, mode, volume, fade):
       """
@@ -196,6 +200,21 @@ init python:
       self.__call_studio('EventDescription_CreateInstance', event, byref(instance))
       self.__call_studio('System_Update', self.__fmod_studio)
       self.__event_slots[slot_id] = instance
+      self.__event_channels[slot_id] = None
+
+    def is_event_loaded(self, slot_id):
+      """
+      Checks if the event in the specified slot is currently loaded.
+
+      Args:
+        slot_id (int): The event slot to check.
+
+      Returns:
+        True if the event is loaded, False otherwise.
+      """
+      event = self.__validate_event(slot_id)
+
+      return event is not None
 
     def set_event_param(self, slot_id, key, value):
       """
@@ -213,7 +232,7 @@ init python:
       if not slot_id in self.__event_slots:
         raise RuntimeError('Event has not been loaded: ' + str(slot_id))
 
-      event = self.__event_slots[slot_id]
+      event = self.__validate_event(slot_id)
 
       if event == None:
         raise RuntimeError('Event has not been loaded: ' + str(slot_id))
@@ -261,6 +280,13 @@ init python:
       channel = c_void_p()
       self.__call_studio('EventInstance_GetChannelGroup', event, byref(channel))
 
+      # Wait for channel to start playing
+      is_playing = c_bool(0)
+      while not is_playing.value:
+        self.__call('Channel_IsPlaying', channel, byref(is_playing))
+
+      self.__event_channels[slot_id] = channel
+
       if fade > 0:
         self.__fade_channel_volume(channel, fade, 0.0, volume, False)
       else:
@@ -282,7 +308,7 @@ init python:
       if not slot_id in self.__event_slots:
         return
 
-      event = self.__event_slots[slot_id]
+      event = self.__validate_event(slot_id)
 
       if event == None:
         return
@@ -300,6 +326,7 @@ init python:
         self.__call_studio('EventInstance_Stop', event)
         self.__call_studio('System_Update', self.__fmod_studio)
         self.__event_slots[slot_id] = None
+        self.__event_channels[slot_id] = None
 
     def set_event_volume(self, slot_id, volume, fade):
       """
@@ -317,7 +344,7 @@ init python:
       if not slot_id in self.__event_slots.keys():
         raise RuntimeError('Event has not been loaded: ' + str(slot_id))
 
-      event = self.__event_slots[slot_id]
+      event = self.__validate_event(slot_id)
 
       if event == None:
         raise RuntimeError('Event has not been loaded: ' + str(slot_id))
@@ -402,6 +429,47 @@ init python:
         raise err
 
       return channel
+
+    def __validate_event(self, slot_id):
+      """
+      Validate that an event is still valid and functional, and if not, kill it.
+
+      Args:
+        slot_id (int): The event slot of the event to validate.
+
+      Returns:
+        The valid event dict, or None if invalid
+      """
+      event = self.__event_slots[slot_id]
+      if event is None:
+        return event
+
+      channel = self.__event_channels[slot_id]
+      if channel is None:
+        return event # Event hasn't started yet...
+
+      try:
+        is_playing = c_bool()
+        self.__call('Channel_IsPlaying', channel, byref(is_playing))
+        if not is_playing.value:
+          # Channel has stopped playing, likely due to fade-out. Stop the event.
+          self.__event_slots[slot_id] = None
+          self.__event_channels[slot_id] = None
+          self.__call_studio('EventInstance_Stop', event)
+          self.__call_studio('System_Update', self.__fmod_studio)
+          return None
+      except FMODError as err:
+        if err.result != 30: # FMOD_ERR_INVALID_HANDLE
+          raise err
+
+        # Channel is unavailable, kill the event
+        self.__event_slots[slot_id] = None
+        self.__event_channels[slot_id] = None
+        self.__call_studio('EventInstance_Stop', event)
+        self.__call_studio('System_Update', self.__fmod_studio)
+        return None
+
+      return event
 
     def __fade_channel_volume(self, channel, time, vol_start, vol_end, close=False):
       """
