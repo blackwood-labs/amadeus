@@ -34,6 +34,42 @@ init python:
       if not self.shutdown in config.periodic_callbacks:
         config.periodic_callbacks.append(self.tick)
 
+      # Restore state when loading
+      if not self.load in config.after_load_callbacks:
+        config.after_load_callbacks.append(self.load)
+
+    def save(self):
+      """
+      Saves the current state of the engine to a global variable.
+
+      This allows the default Ren'Py save functionality to kick in and persist
+      the active engine state to the save file.
+      """
+      global AMADEUS_STATE
+      if not 'AMADEUS_STATE' in globals():
+        AMADEUS_STATE = {}
+
+      AMADEUS_STATE['channel_list'] = self.__channel_list
+
+    def load(self):
+      """
+      Load state from the global variable into the engine.
+
+      If there are any active channels, restart playing sound on those channels.
+      """
+      global AMADEUS_STATE
+
+      # Stop all sounds without affecting state
+      for channel in self.__channel_list:
+        self.__engine.stop_sound(channel['id'], 0.0)
+
+      self.__channel_list = AMADEUS_STATE['channel_list']
+      for channel in self.__channel_list:
+        if channel['data'] is not None:
+          data = channel['data']
+          data[3] = channel['volume'] # Override volume with current value
+          self.play_sound(*data)
+
     def shutdown(self):
       """
       Shut down the engine to free allocated resources.
@@ -89,6 +125,7 @@ init python:
         'name': name,
         'mixer': mixer,
         'volume': 1.0,
+        'data': None,
       }
 
       self.__channel_list.append(channel)
@@ -112,6 +149,7 @@ init python:
       for channel in self.__channel_list:
         del channel['id']
         del channel['volume']
+        del channel['data']
         channels.append(channel)
       return channels
 
@@ -138,8 +176,12 @@ init python:
       if not renpy.loadable(filepath):
         raise ValueError('File does not exist: ' + str(filepath))
 
+      self.stop_sound(channel)
+
       channel = self.__get_channel(channel)
       channel['volume'] = volume
+      channel['data'] = [filepath, channel['name'], loop, volume, fade]
+      self.save()
 
       mode = (0x0 | 0x02000000 | 0x08000000) # FMOD_DEFAULT | FMOD_IGNORETAGS | FMOD_LOWMEM;
       if loop:
@@ -147,7 +189,6 @@ init python:
 
       relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
 
-      self.stop_sound(channel['name'])
       self.__engine.play_sound(filepath, channel['id'], mode, relative_volume, fade)
 
     def stop_sound(self, channel=None, fade=0.0):
@@ -162,7 +203,19 @@ init python:
         ValueError: The specified channel does not exist.
       """
       channel = self.__get_channel(channel)
+      channel['data'] = None
       self.__engine.stop_sound(channel['id'], fade)
+      self.save()
+
+    def stop_all_sounds(self, fade=0.0):
+      """
+      Stops sounds on all channels.
+
+      Args:
+        fade (float): Duration in seconds to fade out.
+      """
+      for channel in self.__channel_list:
+        self.stop_sound(channel['name'], fade)
 
     def set_sound_volume(self, volume, channel=None):
       """
@@ -181,6 +234,7 @@ init python:
       relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
 
       self.__engine.set_sound_volume(channel['id'], relative_volume)
+      self.save()
 
     def __get_channel(self, name):
       """

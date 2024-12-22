@@ -171,6 +171,32 @@ label amadeus_tests:
   $ test_suite_reset()
 
   """
+  Test - Play looping sound for a few lines to test save state...
+  """
+
+  $ amadeus.play_sound("amadeus/test_files/loop.ogg", loop=True, fade=10.0, volume=1.0)
+
+  """
+  Buffer line before lowering volume...
+  """
+
+  $ amadeus.set_sound_volume(0.25)
+
+  """
+  Buffer line before save...
+
+  To successfully complete the test, create a save file here...
+
+  Load the save, and ideally the loop should start again at the new volume...
+  """
+
+  """
+  Test - Save state.. Success!
+  """
+
+  $ test_suite_reset()
+
+  """
   == AMADEUS TEST SUITE COMPLETE ==
   """
 
