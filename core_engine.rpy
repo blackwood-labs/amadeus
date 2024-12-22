@@ -79,25 +79,7 @@ init python:
       self.__channels[channel_id] = channel
 
       if fade > 0:
-        self.__call('System_LockDSP', self.__fmod)
-
-        rate = c_int()
-        self.__call('System_GetSoftwareFormat', self.__fmod, byref(rate), 0, 0)
-        samples = int(rate.value * fade)
-
-        clock = c_ulonglong();
-        self.__call('Channel_GetDSPClock', channel, 0, byref(clock))
-
-        numpoints = c_int()
-        self.__call('Channel_GetFadePoints', channel, byref(numpoints), 0, 0)
-        if numpoints.value > 0:
-          self.__call('Channel_SetDelay', channel, 0, 0, False)
-          self.__call('Channel_RemoveFadePoints', channel, clock.value, clock.value + samples)
-
-        self.__call('Channel_AddFadePoint', channel, clock.value, c_float(0.0))
-        self.__call('Channel_AddFadePoint', channel, clock.value + samples, c_float(volume))
-
-        self.__call('System_UnlockDSP', self.__fmod)
+        self.__fade_channel_volume(channel, fade, 0.0, volume, False)
       else:
         self.__call('Channel_SetVolumeRamp', channel, False)
         self.__call('Channel_SetVolume', channel, c_float(volume))
@@ -124,29 +106,10 @@ init python:
         return
 
       if fade > 0:
-        self.__call('System_LockDSP', self.__fmod)
-
-        rate = c_int()
-        self.__call('System_GetSoftwareFormat', self.__fmod, byref(rate), 0, 0)
-        samples = int(rate.value * fade)
-
         volume = c_float()
         self.__call('Channel_GetVolume', channel, byref(volume))
 
-        clock = c_ulonglong();
-        self.__call('Channel_GetDSPClock', channel, 0, byref(clock))
-
-        numpoints = c_int()
-        self.__call('Channel_GetFadePoints', channel, byref(numpoints), 0, 0)
-        if numpoints.value > 0:
-          self.__call('Channel_SetDelay', channel, 0, 0, False)
-          self.__call('Channel_RemoveFadePoints', channel, clock.value, clock.value + samples)
-
-        self.__call('Channel_AddFadePoint', channel, clock.value, volume)
-        self.__call('Channel_AddFadePoint', channel, clock.value + samples, c_float(0.0))
-        self.__call('Channel_SetDelay', channel, clock.value, clock.value + samples, True)
-
-        self.__call('System_UnlockDSP', self.__fmod)
+        self.__fade_channel_volume(channel, fade, volume.value, 0.0, True)
       else:
         self.__call('Channel_Stop', channel)
         self.__channels[channel_id] = None
@@ -219,3 +182,38 @@ init python:
         raise err
 
       return channel
+
+    def __fade_channel_volume(self, channel, time, vol_start, vol_end, close=False):
+      """
+      fades a channel's volume from one value to another.
+
+      Args:
+        channel (channel pointer): The channel to fade.
+        time (float): Duration of the fade in seconds.
+        vol_start (float): Volume at the beginning of the fade.
+        vol_end (float): Volume at the end of the fade.
+
+      Raises:
+        FMODError: The result was not FMOD_RESULT_OK
+      """
+      self.__call('System_LockDSP', self.__fmod)
+
+      rate = c_int()
+      self.__call('System_GetSoftwareFormat', self.__fmod, byref(rate), 0, 0)
+      samples = int(rate.value * time)
+
+      clock = c_ulonglong()
+      self.__call('Channel_GetDSPClock', channel, 0, byref(clock))
+
+      numpoints = c_int()
+      self.__call('Channel_GetFadePoints', channel, byref(numpoints), 0, 0)
+      if numpoints.value > 0:
+        self.__call('Channel_SetDelay', channel, 0, 0, False)
+        self.__call('Channel_RemoveFadePoints', channel, clock.value, clock.value + samples)
+
+      self.__call('Channel_AddFadePoint', channel, clock.value, c_float(vol_start))
+      self.__call('Channel_AddFadePoint', channel, clock.value + samples, c_float(vol_end))
+      if close:
+        self.__call('Channel_SetDelay', channel, clock.value, clock.value + samples, True)
+
+      self.__call('System_UnlockDSP', self.__fmod)

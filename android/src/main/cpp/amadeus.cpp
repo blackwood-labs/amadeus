@@ -39,6 +39,32 @@ FMOD::Channel* validate_channel(int channel_id) {
    return channel;
 }
 
+void fade_channel_volume(FMOD::Channel *channel, float time, float vol_start, float vol_end, bool close) {
+   fn_check(fmod_system->lockDSP());
+
+   int rate = 0;
+   fn_check(fmod_system->getSoftwareFormat(&rate, 0, 0));
+   unsigned long long samples = (rate * time);
+
+   unsigned long long clock = 0;
+   fn_check(channel->getDSPClock(nullptr, &clock));
+
+   unsigned int numpoints = 0;
+   fn_check(channel->getFadePoints(&numpoints, 0, 0));
+   if (numpoints > 0) {
+      fn_check(channel->setDelay(0, 0, 0));
+      fn_check(channel->removeFadePoints(clock, clock + samples));
+   }
+
+   fn_check(channel->addFadePoint(clock, vol_start));
+   fn_check(channel->addFadePoint(clock + samples, vol_end));
+   if (close) {
+      fn_check(channel->setDelay(0, clock + samples, true));
+   }
+
+   fn_check(fmod_system->unlockDSP());
+}
+
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodInit(JNIEnv * env, jobject obj, jint jchannel_limit, jint jversion) {
    channel_limit = (int) jchannel_limit;
    unsigned int version = (unsigned int) jversion;
@@ -74,26 +100,7 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodPlaySound(JNIEnv
    channel_list[channel_id] = channel;
 
    if (fade > 0) {
-      fn_check(fmod_system->lockDSP());
-
-      int rate = 0;
-      fn_check(fmod_system->getSoftwareFormat(&rate, 0, 0));
-      unsigned long long samples = (rate * fade);
-
-      unsigned long long clock = 0;
-      fn_check(channel->getDSPClock(nullptr, &clock));
-
-      unsigned int numpoints = 0;
-      fn_check(channel->getFadePoints(&numpoints, 0, 0));
-      if (numpoints > 0) {
-         fn_check(channel->setDelay(0, 0, 0));
-         fn_check(channel->removeFadePoints(clock, clock + samples));
-      }
-
-      fn_check(channel->addFadePoint(clock, 0.f));
-      fn_check(channel->addFadePoint(clock + samples, volume));
-
-      fn_check(fmod_system->unlockDSP());
+      fade_channel_volume(channel, fade, 0.f, volume, false);
    } else {
       fn_check(channel->setVolumeRamp(false));
       fn_check(channel->setVolume(volume));
@@ -113,30 +120,10 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound(JNIEnv
    }
 
    if (fade > 0) {
-      fn_check(fmod_system->lockDSP());
-
-      int rate = 0;
-      fn_check(fmod_system->getSoftwareFormat(&rate, 0, 0));
-      unsigned long long samples = (rate * fade);
-
       float volume = 0.f;
       fn_check(channel->getVolume(&volume));
 
-      unsigned long long clock = 0;
-      fn_check(channel->getDSPClock(nullptr, &clock));
-
-      unsigned int numpoints = 0;
-      fn_check(channel->getFadePoints(&numpoints, 0, 0));
-      if (numpoints > 0) {
-         fn_check(channel->setDelay(0, 0, 0));
-         fn_check(channel->removeFadePoints(clock, clock + samples));
-      }
-
-      fn_check(channel->addFadePoint(clock, volume));
-      fn_check(channel->addFadePoint(clock + samples, 0.f));
-      fn_check(channel->setDelay(0, clock + samples, true));
-
-      fn_check(fmod_system->unlockDSP());
+      fade_channel_volume(channel, fade, volume, 0.f, true);
    } else {
       fn_check(channel->stop());
       channel_list[channel_id] = 0;
