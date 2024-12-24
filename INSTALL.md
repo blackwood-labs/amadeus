@@ -11,7 +11,7 @@ You can delete the "test.rpy" file and the "test_files" directory, as these are
 not needed to use Amadeus in your game. These files won't cause any problems,
 but they will take up extra space if you don't delete them.
 
-Please keep the LICENSE.md file in this directory included in your game.
+Please keep the LICENSE.txt file in this directory included in your game.
 
 ## FMOD Libraries
 
@@ -25,9 +25,15 @@ Android download as well.
 In each download, find the following files and copy them into the
 "game/amadeus/lib" directory in your project:
 
- - Windows: api/core/lib/x64/fmod.dll
- - Linux: api/core/lib/x64/libfmod.so
- - Mac: api/core/lib/x64/libfmod.dylib
+ - Windows:
+   - api/core/lib/x64/fmod.dll
+   - api/studio/lib/x64/fmodstudio.dll
+ - Linux:
+   - api/core/lib/x64/libfmod.so
+   - api/studio/lib/x64/libfmodstudio.so
+ - Mac
+   - api/core/lib/x64/libfmod.dylib
+   - api/studio/lib/x64/libfmodstudio.dylib
 
 Amadeus should now work correctly on PC and Mac OS.
 
@@ -39,9 +45,13 @@ changes in the Ren'Py rapt tool configuration.
 First, copy the FMOD libraries from the Android download into the following
 directory in your project "game/amadeus/android/src/main/libfmod":
  - api/core/lib/arm64-v8a/libfmod.so -> libfmod/arm64-v8a/libfmod.so
+ - api/studio/lib/arm64-v8a/libfmodstudio.so -> libfmod/arm64-v8a/libfmodstudio.so
  - api/core/lib/armeabi-v7a/libfmod.so -> libfmod/armeabi-v7a/libfmod.so
+ - api/studio/lib/armeabi-v7a/libfmodstudio.so -> libfmod/armeabi-v7a/libfmodstudio.so
  - api/core/lib/x86/libfmod.so -> libfmod/x86/libfmod.so
+ - api/studio/lib/x86/libfmodstudio.so -> libfmod/x86/libfmodstudio.so
  - api/core/lib/x86_64/libfmod.so -> libfmod/x86_64/libfmod.so
+ - api/studio/lib/x86_64/libfmodstudio.so -> libfmod/x86_64/libfmodstudio.so
  - api/core/lib/fmod.jar -> libfmod/fmod.jar
 
 Next, copy everything in the "game/amadeus/android" directory into the rapt
