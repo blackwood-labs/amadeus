@@ -54,6 +54,21 @@ directory in your project "game/amadeus/android/src/main/libfmod":
  - api/studio/lib/x86_64/libfmodstudio.so -> libfmod/x86_64/libfmodstudio.so
  - api/core/lib/fmod.jar -> libfmod/fmod.jar
 
+Next, you'll need to grab the header files, and put them in the
+"game/amadeus/android/src/main/libfmod/inc" directory:
+ - api/core/inc/fmod.h -> libfmod/inc/fmod.h
+ - api/core/inc/fmod.hpp -> libfmod/inc/fmod.hpp
+ - api/core/inc/fmod_android.h -> libfmod/inc/fmod_android.h
+ - api/core/inc/fmod_codec.h -> libfmod/inc/fmod_codec.h
+ - api/core/inc/fmod_common.h -> libfmod/inc/fmod_common.h
+ - api/core/inc/fmod_dsp.h -> libfmod/inc/fmod_dsp.h
+ - api/core/inc/fmod_dsp_effects.h -> libfmod/inc/fmod_dsp_effects.h
+ - api/core/inc/fmod_errors.h -> libfmod/inc/fmod_errors.h
+ - api/core/inc/fmod_output.h -> libfmod/inc/fmod_output.h
+ - api/studio/inc/fmod_studio.h -> libfmod/inc/fmod_studio.h
+ - api/studio/inc/fmod_studio.hpp -> libfmod/inc/fmod_studio.hpp
+ - api/studio/inc/fmod_studio_common.h -> libfmod/inc/fmod_studio_common.h
+
 Next, copy everything in the "game/amadeus/android" directory into the rapt
 android directory: "/path/to/renpy-sdk/rapt/project/renpyandroid". This will
 override the existing build.gradle file.
