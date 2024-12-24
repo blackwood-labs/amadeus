@@ -1,3 +1,5 @@
+default AMADEUS_STATE = {}
+
 init python:
 
   class Amadeus():
@@ -46,8 +48,6 @@ init python:
       the active engine state to the save file.
       """
       global AMADEUS_STATE
-      if not 'AMADEUS_STATE' in globals():
-        AMADEUS_STATE = {}
 
       AMADEUS_STATE['channel_list'] = self.__channel_list
 
