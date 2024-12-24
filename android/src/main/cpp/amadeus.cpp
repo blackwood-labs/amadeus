@@ -1,6 +1,5 @@
 #include <jni.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "fmod.hpp"
 #include "amadeus.hpp"
@@ -11,7 +10,7 @@ int channel_limit = 32;
 
 void fn_check(FMOD_RESULT result) {
    if (result != FMOD_OK) {
-      exit((int) result);
+      throw (result);
    }
 }
 
@@ -69,19 +68,37 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodInit(JNIEnv * en
    channel_limit = (int) jchannel_limit;
    unsigned int version = (unsigned int) jversion;
 
-   fn_check(FMOD::System_Create(&fmod_system, version));
-   fn_check(fmod_system->init(channel_limit, FMOD_INIT_NORMAL, 0));
+   try {
+      fn_check(FMOD::System_Create(&fmod_system, version));
+      fn_check(fmod_system->init(channel_limit, FMOD_INIT_NORMAL, 0));
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodShutdown(JNIEnv * env, jobject obj) {
-   fn_check(fmod_system->release());
+   try {
+      fn_check(fmod_system->release());
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodTick(JNIEnv * env, jobject obj) {
-   fn_check(fmod_system->update());
+   try {
+      fn_check(fmod_system->update());
 
-   for (int i=0; i<channel_limit; i++) {
-      validate_channel(i);
+      for (int i=0; i<channel_limit; i++) {
+         validate_channel(i);
+      }
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
    }
 }
 
@@ -92,44 +109,56 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodPlaySound(JNIEnv
    float volume = (float) jvolume;
    float fade = (float) jfade;
 
-   FMOD::Sound *sound;
-   fn_check(fmod_system->createSound(filepath, mode, 0, &sound));
+   try {
+      FMOD::Sound *sound;
+      fn_check(fmod_system->createSound(filepath, mode, 0, &sound));
 
-   FMOD::Channel *channel;
-   fn_check(fmod_system->playSound(sound, 0, false, &channel));
-   channel_list[channel_id] = channel;
+      FMOD::Channel *channel;
+      fn_check(fmod_system->playSound(sound, 0, false, &channel));
+      channel_list[channel_id] = channel;
 
-   if (fade > 0) {
-      fade_channel_volume(channel, fade, 0.f, volume, false);
-   } else {
-      fn_check(channel->setVolumeRamp(false));
-      fn_check(channel->setVolume(volume));
+      if (fade > 0) {
+         fade_channel_volume(channel, fade, 0.f, volume, false);
+      } else {
+         fn_check(channel->setVolumeRamp(false));
+         fn_check(channel->setVolume(volume));
+      }
+
+      fn_check(fmod_system->update());
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
    }
-
-   fn_check(fmod_system->update());
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound(JNIEnv * env, jobject obj, jint jchannel_id, jfloat jfade) {
    int channel_id = (int) jchannel_id;
    float fade = (float) jfade;
 
-   FMOD::Channel *channel = validate_channel(channel_id);
+   try {
+      FMOD::Channel *channel = validate_channel(channel_id);
 
-   if (!channel) {
-      return;
+      if (!channel) {
+         return;
+      }
+
+      if (fade > 0) {
+         float volume = 0.f;
+         fn_check(channel->getVolume(&volume));
+
+         fade_channel_volume(channel, fade, volume, 0.f, true);
+      } else {
+         fn_check(channel->stop());
+         channel_list[channel_id] = 0;
+      }
+
+      fn_check(fmod_system->update());
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
    }
-
-   if (fade > 0) {
-      float volume = 0.f;
-      fn_check(channel->getVolume(&volume));
-
-      fade_channel_volume(channel, fade, volume, 0.f, true);
-   } else {
-      fn_check(channel->stop());
-      channel_list[channel_id] = 0;
-   }
-
-   fn_check(fmod_system->update());
 }
 
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(JNIEnv * env, jobject obj, jint jchannel_id, jfloat jvolume, jfloat jfade) {
@@ -137,21 +166,27 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodSetSoundVolume(J
    float volume = (float) jvolume;
    float fade = (float) jfade;
 
-   FMOD::Channel *channel = validate_channel(channel_id);
+   try {
+      FMOD::Channel *channel = validate_channel(channel_id);
 
-   if (!channel) {
-      return;
+      if (!channel) {
+         return;
+      }
+
+      if (fade > 0) {
+         float current_volume = 0.f;
+         fn_check(channel->getVolume(&current_volume));
+
+         fade_channel_volume(channel, fade, current_volume, volume, false);
+      } else {
+         fn_check(channel->setVolumeRamp(true));
+         fn_check(channel->setVolume(volume));
+      }
+
+      fn_check(fmod_system->update());
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
    }
-
-   if (fade > 0) {
-      float current_volume = 0.f;
-      fn_check(channel->getVolume(&current_volume));
-
-      fade_channel_volume(channel, fade, current_volume, volume, false);
-   } else {
-      fn_check(channel->setVolumeRamp(true));
-      fn_check(channel->setVolume(volume));
-   }
-
-   fn_check(fmod_system->update());
 }
