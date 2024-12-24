@@ -3,6 +3,10 @@
 Amadeus is a sound engine for Ren'Py which utilizes the FMOD library to bring
 extra functionality and enriched musical capabilities to Ren'Py games.
 
+This project is still in the early stages, but contributions are welcome in
+any form! In particular, folks willing to test things and find sneaky bugs are
+greatly appreciated.
+
 ## How to Install
 
 Check out the [INSTALL.md](INSTALL.md) file for detailed instructions on how to
