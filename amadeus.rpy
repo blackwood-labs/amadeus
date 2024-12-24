@@ -51,8 +51,11 @@ init python:
       the active engine state to the save file.
       """
       global AMADEUS_STATE
+      if not 'AMADEUS_STATE' in globals():
+        return
 
       AMADEUS_STATE['channel_list'] = self.__channel_list
+      AMADEUS_STATE['event_slots'] = self.__event_slots
 
     def load(self):
       """
@@ -61,17 +64,33 @@ init python:
       If there are any active channels, restart playing sound on those channels.
       """
       global AMADEUS_STATE
+      if not 'AMADEUS_STATE' in globals():
+        return
 
       # Stop all sounds without affecting state
       for channel in self.__channel_list:
         self.__engine.stop_sound(channel['id'], 0.0)
+      for slot_id in self.__event_slots:
+        self.__engine.stop_event(slot_id, 0.0)
 
+      # Restore channels and start playing any active sounds
       self.__channel_list = AMADEUS_STATE['channel_list']
       for channel in self.__channel_list:
         if channel['data'] is not None:
           data = channel['data']
           data[3] = channel['volume'] # Override volume with current value
           self.play_sound(*data)
+
+      # Restore event slots and start playing any active events
+      for slot_id in AMADEUS_STATE['event_slots']:
+        event = AMADEUS_STATE['event_slots'][slot_id]
+        if event is not None and event['save']:
+          self.load_event(event['name'], event['mixer'])
+          for key in event['parameters'].keys():
+            self.set_event_params(event['name'], event['parameters'])
+          self.ensure_event_time_elapsed(event['name'], event['position'])
+          if event['started']:
+            self.start_event(event['name'], event['volume'])
 
     def shutdown(self):
       """
@@ -145,6 +164,7 @@ init python:
       }
 
       self.__channel_list.append(channel)
+      self.save()
 
     def register_default_channels(self):
       """
@@ -300,7 +320,12 @@ init python:
       event['name'] = name
       event['mixer'] = mixer
       event['volume'] = 1.0
+      event['save'] = True
+      event['started'] = False,
+      event['parameters'] = {}
+      event['position'] = 0.0
       self.__event_slots[slot_id] = event
+      self.save()
 
     def set_event_params(self, event, params):
       """
@@ -311,11 +336,13 @@ init python:
         params (dict): The event parameters to set as a dict of key => value.
       """
       event = self.__get_event(event)
+      event_params = event['parameters']
 
-      keys =  list(params.keys())
-      values =  list(params.values())
-      for i, key in enumerate(keys):
-        self.__engine.set_event_param(event['slot_id'], key, values[i])
+      for key in params:
+        value = params[key]
+        event_params[key] = value
+        self.__engine.set_event_param(event['slot_id'], key, value)
+      self.save()
 
     def start_event(self, name, volume=1.0, fade=0.0):
       """
@@ -327,10 +354,13 @@ init python:
         fade (float): Duration in seconds to fade in.
       """
       event = self.__get_event(name)
+      event['volume'] = volume
+      event['started'] = True
 
       relative_volume = volume * self.__get_mixer_volume(event['mixer'])
 
       self.__engine.start_event(event['slot_id'], relative_volume, fade)
+      self.save()
 
     def stop_event(self, name, fade=0.0):
       """
@@ -341,11 +371,13 @@ init python:
         fade (float): Duration in seconds to fade out.
       """
       event = self.__get_event(name)
+      event['save'] = False
       self.__engine.stop_event(event['slot_id'], fade)
       if fade == 0.0:
         # Only remove event reference when not fading
         # Allows a later hard stop after starting a fade if needed
         self.__event_slots[event['slot_id']] = None
+      self.save()
 
     def stop_all_events(self, fade=0.0):
       """
@@ -356,8 +388,10 @@ init python:
       """
       for event in self.__event_slots.values():
         if event != None:
+          event['save'] = False
           self.__engine.stop_event(event['slot_id'], fade)
           self.__event_slots[event['slot_id']] = None
+      self.save()
 
     def set_event_volume(self, event, volume, fade=0.0):
       """
@@ -374,6 +408,7 @@ init python:
       relative_volume = volume * self.__get_mixer_volume(event['mixer'])
 
       self.__engine.set_event_volume(event['slot_id'], relative_volume, fade)
+      self.save()
 
     def ensure_event_time_elapsed(self, event, time):
       """
@@ -386,8 +421,10 @@ init python:
         time (float): The number of seconds to ensure have elapsed.
       """
       event = self.__get_event(event)
+      event['position'] = time
 
       self.__engine.ensure_event_time_elapsed(event['slot_id'], time)
+      self.save()
 
     def __get_channel(self, name):
       """
@@ -424,7 +461,8 @@ init python:
       Raises:
         ValueError: The specified event does not exist.
       """
-      for event in self.__event_slots.values():
+      for slot_id in self.__event_slots:
+        event = self.__event_slots[slot_id]
         if event is not None and event['name'] == name:
           return event
 
