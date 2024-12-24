@@ -7,11 +7,15 @@ the engine can provide, and ensures everything is working correctly.
 init:
   $ amadeus = Amadeus()
 
+  $ amadeus.load_bank("amadeus/test_files/Master.bank")
+  $ amadeus.load_bank("amadeus/test_files/Master.strings.bank")
+  $ amadeus.load_bank("amadeus/test_files/Music.bank")
+  $ amadeus.load_bank("amadeus/test_files/Vehicles.bank")
+
   python:
     def test_suite_reset():
-      amadeus.stop_sound(channel="music")
-      amadeus.stop_sound(channel="sound")
-      amadeus.stop_sound(channel="voice")
+      amadeus.stop_all_sounds()
+      amadeus.stop_all_events()
       renpy.say(None, '[[INFO] Environment Reset...')
 
 label amadeus_tests:
@@ -216,6 +220,155 @@ label amadeus_tests:
 
   """
   == AMADEUS TEST SUITE COMPLETE ==
+  """
+
+label amadeus_studio_tests:
+
+  """
+  == BEGIN AMADEUS STUDIO TEST SUITE ==
+  """
+
+  """
+  Loading bank files...
+  """
+
+  $ amadeus.load_bank("amadeus/test_files/Master.bank")
+  $ amadeus.load_bank("amadeus/test_files/Master.strings.bank")
+
+  """
+  Loading bank files...{fast} Success!
+  """
+
+  """
+  Test - Loading and starting a simple event...
+  """
+
+  $ amadeus.load_event("Music/Level 01")
+  $ amadeus.start_event("Music/Level 01")
+
+  """
+  Test - Loading and starting a simple event...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
+  Test - Playing event at a lower volume...
+  """
+
+  $ amadeus.load_event("Music/Level 01")
+  $ amadeus.start_event("Music/Level 01", volume=0.25)
+
+  """
+  Test - Playing event at a lower volume...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
+  Test - Playing event at a different volumes...\n
+  """
+
+  $ amadeus.load_event("Music/Level 01")
+  $ amadeus.start_event("Music/Level 01")
+
+  """
+  Test - Playing event at a different volumes...\n{fast}Normal...
+  """
+
+  $ amadeus.set_event_volume("Music/Level 01", 0.5)
+
+  """
+  Test - Playing event at a different volumes...\nNormal...{fast} Low...
+  """
+
+  $ amadeus.set_event_volume("Music/Level 01", 1.25)
+
+  """
+  Test - Playing event at a different volumes...\nNormal... Low...{fast} High...
+
+  Test - Playing event at a different volumes...\nNormal... Low...{fast} High...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
+  Test - Loading multiple events at once...
+  """
+
+  $ amadeus.load_event("Music/Level 01")
+  $ amadeus.start_event("Music/Level 01")
+
+  $ amadeus.load_event("Vehicles/Ride-on Mower")
+  $ amadeus.set_event_params("Vehicles/Ride-on Mower", {"RPM": 650})
+  $ amadeus.start_event("Vehicles/Ride-on Mower")
+
+  """
+  Test - Loading multiple events at once...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
+  Test - Setting event parameters...
+
+  Test - Setting event parameters...{fast}\nStarting event...
+  """
+
+  $ amadeus.load_event("Vehicles/Ride-on Mower")
+  $ amadeus.set_event_params("Vehicles/Ride-on Mower", {"RPM": 400})
+  $ amadeus.start_event("Vehicles/Ride-on Mower")
+
+  """
+
+  Test - Setting event parameters...\nStarting event...{fast} Success!
+
+  Test - Setting event parameters...\nIncreasing RPM value...
+  """
+
+  $ amadeus.set_event_params("Vehicles/Ride-on Mower", {"RPM": 650})
+
+  """
+  Test - Setting event parameters...\nIncreasing RPM value...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
+  Test - Playing event at a later start time...
+  """
+
+  $ amadeus.load_event("Music/Level 01")
+  $ amadeus.ensure_event_time_elapsed("Music/Level 01", 10.0)
+  $ amadeus.start_event("Music/Level 01")
+
+  """
+  Test - Playing event at a later start time...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
+  Test - Playing event with fade in...
+  """
+
+  $ amadeus.load_event("Music/Level 01")
+  $ amadeus.start_event("Music/Level 01", fade=10.0)
+
+  """
+  Test - Playing event with fade in...{fast} and fade out...
+  """
+
+  $ amadeus.stop_event("Music/Level 01", fade=10.0)
+
+  """
+  Test - Playing event with fade in... and fade out...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
+  == AMADEUS STUDIO TEST SUITE COMPLETE ==
   """
 
   return

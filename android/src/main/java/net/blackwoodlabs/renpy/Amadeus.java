@@ -18,12 +18,20 @@ public class Amadeus {
 
 	// Native function declarations
 
-	private native void fmodInit(int channel_limit, int version);
+	private native void fmodInit(int channel_limit, int event_limit, int version);
+	private native boolean fmodIsEventLoaded(int slot_id);
 	private native void fmodShutdown();
 	private native void fmodTick();
 	private native void fmodPlaySound(String filepath, int channel_id, int mode, float volume, float fade);
 	private native void fmodStopSound(int channel_id, float fade);
 	private native void fmodSetSoundVolume(int channel_id, float volume, float fade);
+	private native void fmodLoadBank(String filepath);
+	private native void fmodLoadEvent(String name, int slot_id);
+	private native void fmodSetEventParam(int slot_id, String key, float value);
+	private native void fmodStartEvent(int slot_id, float volume, float fade);
+	private native void fmodStopEvent(int slot_id, float fade);
+	private native void fmodSetEventVolume(int slot_id, float volume, float fade);
+	private native void fmodEnsureEventTimeElapsed(int slot_id, float time);
 
 	/**
 	 * Static variable for Singleton pattern
@@ -35,6 +43,7 @@ public class Amadeus {
 	 */
 	private Amadeus() {
 		System.loadLibrary("fmod");
+		System.loadLibrary("fmodstudio");
 		System.loadLibrary("amadeus");
 	}
 
@@ -52,12 +61,13 @@ public class Amadeus {
 	 *
 	 * @param activity The Android main activity, used by the Java FMOD library.
 	 * @param channel_limit The maximum number of channels allowed to be registered.
+	 * @param event_limit The maximum number of events allowed to be run at once.
 	 * @param version The version of FMOD we are loading.
 	 */
-	public void init(Activity activity, int channel_limit, int version) {
+	public void init(Activity activity, int channel_limit, int event_limit, int version) {
 		org.fmod.FMOD.init(activity);
 
-		fmodInit(channel_limit, version);
+		fmodInit(channel_limit, event_limit, version);
 	}
 
 	/**
@@ -78,10 +88,10 @@ public class Amadeus {
 	 * Plays sound from the given filepath on a specific channel.
 	 *
 	 * @param filepath The path of the file to load and play.
-     * @param channel_id The numeric ID of the channel to play the sound on.
-     * @param mode The mode flags which determine how to play the sound.
-     * @param volume Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
-     * @param fade Duration in seconds to fade in.
+	 * @param channel_id The numeric ID of the channel to play the sound on.
+	 * @param mode The mode flags which determine how to play the sound.
+	 * @param volume Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+	 * @param fade Duration in seconds to fade in.
 	 */
 	public void play_sound(String filepath, int channel_id, int mode, float volume, float fade) {
 		fmodPlaySound(filepath, channel_id, mode, fade, volume);
@@ -90,8 +100,8 @@ public class Amadeus {
 	/**
 	 * Stops the sound on the given channel.
 	 *
-     * @param channel_id The numeric ID of the channel to stop the sound on.
-     * @param fade Duration in seconds to fade out.
+	 * @param channel_id The numeric ID of the channel to stop the sound on.
+	 * @param fade Duration in seconds to fade out.
 	 */
 	public void stop_sound(int channel_id, float fade) {
 		fmodStopSound(channel_id, fade);
@@ -100,11 +110,94 @@ public class Amadeus {
 	/**
 	 * Sets the sound volume on the given channel.
 	 *
-    * @param channel_id The numeric ID of the channel to set the volume on.
-    * @param volume Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
-    * @param fade (float): Duration in seconds to fade.
+	 * @param channel_id The numeric ID of the channel to set the volume on.
+	 * @param volume Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+	 * @param fade (float): Duration in seconds to fade.
 	 */
 	public void set_sound_volume(int channel_id, float volume, float fade) {
 		fmodSetSoundVolume(channel_id, volume, fade);
+	}
+
+	/**
+	 * Loads a bank file into FMOD Studio.
+	 *
+	 * @param filepath The path of the bank file to load.
+	 */
+	public void load_bank(String filepath) {
+		fmodLoadBank(filepath);
+	}
+
+	/**
+	 * Loads an event into memory and makes it ready for use.
+	 *
+	 * @param name The name of the event to load.
+	 * @param slot_id The event slot to load the event into.
+	 */
+	public void load_event(String name, int slot_id) {
+		fmodLoadEvent(name, slot_id);
+	}
+
+	/**
+	 * Checks if the event in the specified slot is currently loaded.
+	 *
+	 * @param slot_id The event slot to check.
+	 *
+	 * @return True if the event is loaded, False otherwise.
+	 */
+	public boolean is_event_loaded(int slot_id) {
+		return fmodIsEventLoaded(slot_id);
+	}
+
+	/**
+	 * Sets a parameter value on an event.
+	 *
+	 * @param slot_id The event slot of the event to set the parameter on.
+	 * @param key The parameter key.
+	 * @param value The parameter value.
+	 */
+	public void set_event_param(int slot_id, String key, float value) {
+		fmodSetEventParam(slot_id, key, value);
+	}
+
+	/**
+	 * Starts an event.
+	 *
+	 * @param slot_id The event slot of the event to start.
+	 * @param volume Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+	 * @param fade Duration in seconds to fade in.
+	 */
+	public void start_event(int slot_id, float volume, float fade) {
+		fmodStartEvent(slot_id, volume, fade);
+	}
+
+	/**
+	 * Stops an event in the given slot.
+	 *
+	 * @param slot_id The event slot of the event to stop.
+	 * @param fade Duration in seconds to fade out.
+	 */
+	public void stop_event(int slot_id, float fade) {
+		fmodStopEvent(slot_id, fade);
+	}
+
+	/**
+	 * Sets the volume for an event in the given slot.
+	 *
+	 * @param slot_id The event slot of the event to set the volume for.
+	 * @param volume Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+	 * @param fade Duration in seconds to fade.
+	 */
+	public void set_event_volume(int slot_id, float volume, float fade) {
+		fmodSetEventVolume(slot_id, volume, fade);
+	}
+
+	/**
+	 * Ensures that the given event has reached the specified time.
+	 *
+	 * @param slot_id The event slot of the event to check.
+	 * @param time The number of seconds to ensure have elapsed.
+	 */
+	public void ensure_event_time_elapsed(int slot_id, float time) {
+		fmodEnsureEventTimeElapsed(slot_id, time);
 	}
 }

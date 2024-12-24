@@ -7,9 +7,12 @@ init python:
     Amadeus sound engine.
     """
 
-    def __init__(self, channel_limit=8, version=0x00020299, default_channels=True):
+    def __init__(self, channel_limit=8, event_limit=8, version=0x00020299, default_channels=True):
       self.__channel_limit = channel_limit
       self.__channel_list = []
+      self.__event_limit = event_limit
+      self.__event_slots = {}
+      self.__banks = []
       self.__version = version
       self.__mixer_volume = {}
 
@@ -21,12 +24,12 @@ init python:
         # It encounters an ill-defined internal error when loading via python CDLL
         # Therefore, we implement a separate engine implementation for Android
         try:
-          self.__engine = AmadeusAndroidEngine(channel_limit, version)
+          self.__engine = AmadeusAndroidEngine(channel_limit, event_limit, version)
         except NameError:
           # If the jnius library isn't available, try loading the core engine instead
-          self.__engine = AmadeusCoreEngine(channel_limit, version)
+          self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
       else:
-        self.__engine = AmadeusCoreEngine(channel_limit, version)
+        self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
 
       # Ensure that the engine is properly shut down when reloading and exiting
       if not self.shutdown in config.quit_callbacks:
@@ -48,8 +51,11 @@ init python:
       the active engine state to the save file.
       """
       global AMADEUS_STATE
+      if not 'AMADEUS_STATE' in globals():
+        return
 
       AMADEUS_STATE['channel_list'] = self.__channel_list
+      AMADEUS_STATE['event_slots'] = self.__event_slots
 
     def load(self):
       """
@@ -58,17 +64,33 @@ init python:
       If there are any active channels, restart playing sound on those channels.
       """
       global AMADEUS_STATE
+      if not 'AMADEUS_STATE' in globals():
+        return
 
       # Stop all sounds without affecting state
       for channel in self.__channel_list:
         self.__engine.stop_sound(channel['id'], 0.0)
+      for slot_id in self.__event_slots:
+        self.__engine.stop_event(slot_id, 0.0)
 
+      # Restore channels and start playing any active sounds
       self.__channel_list = AMADEUS_STATE['channel_list']
       for channel in self.__channel_list:
         if channel['data'] is not None:
           data = channel['data']
           data[3] = channel['volume'] # Override volume with current value
           self.play_sound(*data)
+
+      # Restore event slots and start playing any active events
+      for slot_id in AMADEUS_STATE['event_slots']:
+        event = AMADEUS_STATE['event_slots'][slot_id]
+        if event is not None and event['save']:
+          self.load_event(event['name'], event['mixer'])
+          for key in event['parameters'].keys():
+            self.set_event_params(event['name'], event['parameters'])
+          self.ensure_event_time_elapsed(event['name'], event['position'])
+          if event['started']:
+            self.start_event(event['name'], event['volume'])
 
     def shutdown(self):
       """
@@ -82,6 +104,10 @@ init python:
       """
       self.__engine.tick()
       self.__sync_mixer_volume()
+
+      for i in self.__event_slots:
+        if not self.__engine.is_event_loaded(i):
+          self.__event_slots[i] = None # Stopped at some point, kill it
 
     def get_engine(self):
       """
@@ -100,6 +126,15 @@ init python:
         The channel limit.
       """
       return self.__channel_limit
+
+    def get_event_limit(self):
+      """
+      Accessor to get the event limit.
+
+      Returns:
+        The event limit.
+      """
+      return self.__event_limit
 
     def register_channel(self, name, mixer):
       """
@@ -129,6 +164,7 @@ init python:
       }
 
       self.__channel_list.append(channel)
+      self.save()
 
     def register_default_channels(self):
       """
@@ -237,6 +273,159 @@ init python:
       self.__engine.set_sound_volume(channel['id'], relative_volume, fade)
       self.save()
 
+    def load_bank(self, filepath):
+      """
+      Loads a bank file into FMOD Studio.
+
+      Args:
+        filepath (str): The path of the bank file to load.
+      """
+      if filepath in self.__banks:
+        return # Already loaded
+
+      self.__engine.load_bank(filepath)
+      self.__banks.append(filepath)
+
+    def load_event(self, name, mixer='music'):
+      """
+      Loads an event into memory and makes it ready for use.
+
+      Args:
+        name (str): The name of the event to load.
+        mixer (str): The Ren'Py mixer to associate with the event.
+      """
+      try:
+        event = self.__get_event(name)
+        return # Already loaded.
+      except ValueError:
+        pass # Not loaded, proceed.
+
+      # Try to find an empty slot
+      slot_id = None
+      for i in self.__event_slots:
+        event = self.__event_slots[i]
+        if event is None:
+          slot_id = i
+
+      # All slots are full, do we have enough space to append?
+      if slot_id is None:
+        slot_id = len(self.__event_slots.keys())
+        if slot_id == self.__event_limit:
+          raise RuntimeError('Exceeded maximum number of events')
+
+      self.__engine.load_event(name, slot_id)
+
+      event = {}
+      event['slot_id'] = slot_id
+      event['name'] = name
+      event['mixer'] = mixer
+      event['volume'] = 1.0
+      event['save'] = True
+      event['started'] = False,
+      event['parameters'] = {}
+      event['position'] = 0.0
+      self.__event_slots[slot_id] = event
+      self.save()
+
+    def set_event_params(self, event, params):
+      """
+      Sets parameters on a given event.
+
+      Args:
+        event (str): The name of the event to set the parameter on.
+        params (dict): The event parameters to set as a dict of key => value.
+      """
+      event = self.__get_event(event)
+      event_params = event['parameters']
+
+      for key in params:
+        value = params[key]
+        event_params[key] = value
+        self.__engine.set_event_param(event['slot_id'], key, value)
+      self.save()
+
+    def start_event(self, name, volume=1.0, fade=0.0):
+      """
+      Starts an event.
+
+      Args:
+        name (str): The name of the event to start.
+        volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade in.
+      """
+      event = self.__get_event(name)
+      event['volume'] = volume
+      event['started'] = True
+
+      relative_volume = volume * self.__get_mixer_volume(event['mixer'])
+
+      self.__engine.start_event(event['slot_id'], relative_volume, fade)
+      self.save()
+
+    def stop_event(self, name, fade=0.0):
+      """
+      Stops an event.
+
+      Args:
+        name (str): The name of the event to stop.
+        fade (float): Duration in seconds to fade out.
+      """
+      event = self.__get_event(name)
+      event['save'] = False
+      self.__engine.stop_event(event['slot_id'], fade)
+      if fade == 0.0:
+        # Only remove event reference when not fading
+        # Allows a later hard stop after starting a fade if needed
+        self.__event_slots[event['slot_id']] = None
+      self.save()
+
+    def stop_all_events(self, fade=0.0):
+      """
+      Stops all events.
+
+      Args:
+        fade (float): Duration in seconds to fade out.
+      """
+      for event in self.__event_slots.values():
+        if event != None:
+          event['save'] = False
+          self.__engine.stop_event(event['slot_id'], fade)
+          self.__event_slots[event['slot_id']] = None
+      self.save()
+
+    def set_event_volume(self, event, volume, fade=0.0):
+      """
+      Sets the sound volume on the given event.
+
+      Args:
+        name (str): The name of the event to set the volume on.
+        volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
+        fade (float): Duration in seconds to fade.
+      """
+      event = self.__get_event(event)
+      event['volume'] = volume
+
+      relative_volume = volume * self.__get_mixer_volume(event['mixer'])
+
+      self.__engine.set_event_volume(event['slot_id'], relative_volume, fade)
+      self.save()
+
+    def ensure_event_time_elapsed(self, event, time):
+      """
+      Ensures that the given event has reached the specified time.
+
+      This is useful for triggers which rely on specific timing.
+
+      Args:
+        event (str): The name of the event to set the elapsed time on.
+        time (float): The number of seconds to ensure have elapsed.
+      """
+      event = self.__get_event(event)
+      event['position'] = time
+
+      self.__engine.ensure_event_time_elapsed(event['slot_id'], time)
+      self.save()
+
     def __get_channel(self, name):
       """
       Retrieves the channel with the given name.
@@ -258,6 +447,26 @@ init python:
           return channel
 
       raise ValueError('Unknown Amadeus channel: ' + str(name))
+
+    def __get_event(self, name):
+      """
+      Retrieves a given event obj by name.
+
+      Args:
+        name (str): The name of the event to return.
+
+      Returns:
+        A dict containing the details of the event.
+
+      Raises:
+        ValueError: The specified event does not exist.
+      """
+      for slot_id in self.__event_slots:
+        event = self.__event_slots[slot_id]
+        if event is not None and event['name'] == name:
+          return event
+
+      raise ValueError('Unknown Amadeus event: ' + str(name))
 
     def __get_mixer_volume(self, mixer):
       """
@@ -292,6 +501,10 @@ init python:
       for channel in self.__channel_list:
         if mixer == channel['mixer']:
           self.__engine.set_sound_volume(channel['id'], volume * channel['volume'], 0.0)
+
+      for event in self.__event_slots.values():
+        if event != None and mixer == event['mixer']:
+          self.__engine.set_event_volume(event['slot_id'], volume * event['volume'], 0.0)
 
     def __sync_mixer_volume(self):
       """
