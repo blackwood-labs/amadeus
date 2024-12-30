@@ -9,6 +9,7 @@ init python:
       self.__id = id
       self.__name = name
       self.__mixer = mixer
+      self.__mixer_volume = 1.0
       self.__active = None
 
     def get_id(self):
@@ -103,3 +104,18 @@ init python:
         relative_volume = 0.0
 
       self.__engine.set_sound_volume(self.__id, relative_volume, fade)
+
+    def tick(self):
+      """
+      Engine tick (20Hz).
+      """
+      if self.__active is not None:
+        # Synchronize the active sound volume with the mixer volume level
+        mixer_volume = renpy.game.preferences.volumes.get(self.__mixer, 1.0)
+        if renpy.game.preferences.mute.get(self.__mixer, False):
+          mixer_volume = 0.0
+
+        if self.__mixer_volume != mixer_volume:
+          relative_volume = self.__active['volume'] * mixer_volume
+          self.__engine.set_sound_volume(self.__id, relative_volume, 0.0)
+          self.__mixer_volume = mixer_volume
