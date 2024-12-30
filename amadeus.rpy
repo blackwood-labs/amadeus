@@ -16,9 +16,6 @@ init python:
       self.__version = version
       self.__mixer_volume = {}
 
-      if default_channels:
-        self.register_default_channels()
-
       if renpy.android:
         # The FMOD library expects to be loaded via Android JNI
         # It encounters an ill-defined internal error when loading via python CDLL
@@ -30,6 +27,10 @@ init python:
           self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
       else:
         self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
+
+      # Register default channels if enabled
+      if default_channels:
+        self.register_default_channels()
 
       # Ensure that the engine is properly shut down when reloading and exiting
       if not self.shutdown in config.quit_callbacks:
@@ -54,7 +55,18 @@ init python:
       if not 'AMADEUS_STATE' in globals():
         return
 
-      AMADEUS_STATE['channel_list'] = self.__channel_list
+      channels = []
+      for channel in self.__channel_list:
+        data = {
+          'id': channel.get_id(),
+          'name': channel.get_name(),
+          'mixer': channel.get_mixer(),
+          'now_playing': channel.now_playing(),
+        }
+        channels.append(data)
+
+      AMADEUS_STATE['channels'] = channels
+
       AMADEUS_STATE['event_slots'] = self.__event_slots
 
     def load(self):
@@ -67,23 +79,25 @@ init python:
       if not 'AMADEUS_STATE' in globals():
         return
 
+      load_state = AMADEUS_STATE.copy()
+
       # Stop all sounds without affecting state
       for channel in self.__channel_list:
-        self.__engine.stop_sound(channel['id'], 0.0)
+        channel.stop_sound(0.0)
       for slot_id in self.__event_slots:
         self.__engine.stop_event(slot_id, 0.0)
 
       # Restore channels and start playing any active sounds
-      self.__channel_list = AMADEUS_STATE['channel_list']
-      for channel in self.__channel_list:
-        if channel['data'] is not None:
-          data = channel['data']
-          data[3] = channel['volume'] # Override volume with current value
-          self.play_sound(*data)
+      self.clear_channels()
+      for channel_data in load_state['channels']:
+        self.register_channel(channel_data['name'], channel_data['mixer'])
+        if channel_data['now_playing'] is not None:
+          channel = self.__get_channel(channel_data['name'])
+          channel.play_sound(*channel_data['now_playing'].values())
 
       # Restore event slots and start playing any active events
-      for slot_id in AMADEUS_STATE['event_slots']:
-        event = AMADEUS_STATE['event_slots'][slot_id]
+      for slot_id in load_state['event_slots']:
+        event = load_state['event_slots'][slot_id]
         if event is not None and event['save']:
           self.load_event(event['name'], event['mixer'])
           for key in event['parameters'].keys():
@@ -104,6 +118,9 @@ init python:
       """
       self.__engine.tick()
       self.__sync_mixer_volume()
+
+      for channel in self.__channel_list:
+        channel.tick()
 
       for i in self.__event_slots:
         if not self.__engine.is_event_loaded(i):
@@ -146,22 +163,17 @@ init python:
 
       Raises:
         RuntimeError: Attempted to register more than the maximum number of channels.
+        ValueError: Attempted to register a channel with a name that is already in use.
       """
       if len(self.__channel_list) == self.__channel_limit:
         raise RuntimeError('Exceeded maximum number of channels')
 
       # Avoid duplicate registrations
       for channel in self.__channel_list:
-        if channel['name'] == name:
-          return
+        if channel.get_name() == name:
+          raise ValueError('Channel has already been registered')
 
-      channel = {
-        'id': len(self.__channel_list),
-        'name': name,
-        'mixer': mixer,
-        'volume': 1.0,
-        'data': None,
-      }
+      channel = AmadeusChannel(engine=self.__engine, id=len(self.__channel_list), name=name, mixer=mixer)
 
       self.__channel_list.append(channel)
       self.save()
@@ -194,6 +206,7 @@ init python:
       Clear ths list of registered channels.
       """
       self.__channel_list = []
+      self.save()
 
     def play_sound(self, filepath, channel=None, loop=False, volume=1.0, fade=0.0):
       """
@@ -212,20 +225,11 @@ init python:
       if not renpy.loadable(filepath):
         raise ValueError('File does not exist: ' + str(filepath))
 
-      self.stop_sound(channel)
-
       channel = self.__get_channel(channel)
-      channel['volume'] = volume
-      channel['data'] = [filepath, channel['name'], loop, volume, fade]
+      channel.stop_sound(0.0)
+
+      channel.play_sound(filepath, loop, volume, fade)
       self.save()
-
-      mode = (0x0 | 0x02000000 | 0x08000000) # FMOD_DEFAULT | FMOD_IGNORETAGS | FMOD_LOWMEM;
-      if loop:
-        mode = (mode | 0x00000002) # FMOD_LOOP_NORMAL
-
-      relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
-
-      self.__engine.play_sound(filepath, channel['id'], mode, relative_volume, fade)
 
     def stop_sound(self, channel=None, fade=0.0):
       """
@@ -239,8 +243,7 @@ init python:
         ValueError: The specified channel does not exist.
       """
       channel = self.__get_channel(channel)
-      channel['data'] = None
-      self.__engine.stop_sound(channel['id'], fade)
+      channel.stop_sound(fade)
       self.save()
 
     def stop_all_sounds(self, fade=0.0):
@@ -251,7 +254,9 @@ init python:
         fade (float): Duration in seconds to fade out.
       """
       for channel in self.__channel_list:
-        self.stop_sound(channel['name'], fade)
+        channel.stop_sound(fade)
+
+      self.save()
 
     def set_sound_volume(self, volume, channel=None, fade=0.0):
       """
@@ -266,11 +271,7 @@ init python:
         ValueError: The specified channel does not exist.
       """
       channel = self.__get_channel(channel)
-      channel['volume'] = volume
-
-      relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
-
-      self.__engine.set_sound_volume(channel['id'], relative_volume, fade)
+      channel.set_sound_volume(volume, fade)
       self.save()
 
     def load_bank(self, filepath):
@@ -443,7 +444,7 @@ init python:
         return self.__channel_list[0]
 
       for channel in self.__channel_list:
-        if channel['name'] == name:
+        if channel.get_name() == name:
           return channel
 
       raise ValueError('Unknown Amadeus channel: ' + str(name))
@@ -492,23 +493,19 @@ init python:
 
     def __set_mixer_volume(self, mixer, volume):
       """
-      Sets the volume level for all channels associated with the specified Ren'Py mixer.
+      Sets the volume level for all events associated with the specified Ren'Py mixer.
 
       Args:
         mixer (str): The name of the Ren'Py mixer fetch the volume for.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
       """
-      for channel in self.__channel_list:
-        if mixer == channel['mixer']:
-          self.__engine.set_sound_volume(channel['id'], volume * channel['volume'], 0.0)
-
       for event in self.__event_slots.values():
         if event != None and mixer == event['mixer']:
           self.__engine.set_event_volume(event['slot_id'], volume * event['volume'], 0.0)
 
     def __sync_mixer_volume(self):
       """
-      Synchronize the volume of Ren'Py mixers with all associated channels.
+      Synchronize the volume of Ren'Py mixers with all associated events.
       """
       for mixer in renpy.music.get_all_mixers():
         volume = self.__get_mixer_volume(mixer)
