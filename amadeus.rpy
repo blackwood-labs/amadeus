@@ -152,16 +152,10 @@ init python:
 
       # Avoid duplicate registrations
       for channel in self.__channel_list:
-        if channel['name'] == name:
+        if channel.get_name() == name:
           return
 
-      channel = {
-        'id': len(self.__channel_list),
-        'name': name,
-        'mixer': mixer,
-        'volume': 1.0,
-        'data': None,
-      }
+      channel = AmadeusChannel(engine=self.__engine, id=len(self.__channel_list), name=name, mixer=mixer)
 
       self.__channel_list.append(channel)
       self.save()
@@ -212,20 +206,11 @@ init python:
       if not renpy.loadable(filepath):
         raise ValueError('File does not exist: ' + str(filepath))
 
-      self.stop_sound(channel)
-
       channel = self.__get_channel(channel)
-      channel['volume'] = volume
-      channel['data'] = [filepath, channel['name'], loop, volume, fade]
+      channel.stop_sound(0.0)
+
+      channel.play_sound(filepath, loop, volume, fade)
       self.save()
-
-      mode = (0x0 | 0x02000000 | 0x08000000) # FMOD_DEFAULT | FMOD_IGNORETAGS | FMOD_LOWMEM;
-      if loop:
-        mode = (mode | 0x00000002) # FMOD_LOOP_NORMAL
-
-      relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
-
-      self.__engine.play_sound(filepath, channel['id'], mode, relative_volume, fade)
 
     def stop_sound(self, channel=None, fade=0.0):
       """
@@ -239,8 +224,7 @@ init python:
         ValueError: The specified channel does not exist.
       """
       channel = self.__get_channel(channel)
-      channel['data'] = None
-      self.__engine.stop_sound(channel['id'], fade)
+      channel.stop_sound(fade)
       self.save()
 
     def stop_all_sounds(self, fade=0.0):
@@ -251,7 +235,9 @@ init python:
         fade (float): Duration in seconds to fade out.
       """
       for channel in self.__channel_list:
-        self.stop_sound(channel['name'], fade)
+        channel.stop_sound(fade)
+
+      self.save()
 
     def set_sound_volume(self, volume, channel=None, fade=0.0):
       """
@@ -266,11 +252,7 @@ init python:
         ValueError: The specified channel does not exist.
       """
       channel = self.__get_channel(channel)
-      channel['volume'] = volume
-
-      relative_volume = volume * self.__get_mixer_volume(channel['mixer'])
-
-      self.__engine.set_sound_volume(channel['id'], relative_volume, fade)
+      channel.set_sound_volume(volume, fade)
       self.save()
 
     def load_bank(self, filepath):
@@ -443,7 +425,7 @@ init python:
         return self.__channel_list[0]
 
       for channel in self.__channel_list:
-        if channel['name'] == name:
+        if channel.get_name() == name:
           return channel
 
       raise ValueError('Unknown Amadeus channel: ' + str(name))
@@ -492,23 +474,19 @@ init python:
 
     def __set_mixer_volume(self, mixer, volume):
       """
-      Sets the volume level for all channels associated with the specified Ren'Py mixer.
+      Sets the volume level for all events associated with the specified Ren'Py mixer.
 
       Args:
         mixer (str): The name of the Ren'Py mixer fetch the volume for.
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
       """
-      for channel in self.__channel_list:
-        if mixer == channel['mixer']:
-          self.__engine.set_sound_volume(channel['id'], volume * channel['volume'], 0.0)
-
       for event in self.__event_slots.values():
         if event != None and mixer == event['mixer']:
           self.__engine.set_event_volume(event['slot_id'], volume * event['volume'], 0.0)
 
     def __sync_mixer_volume(self):
       """
-      Synchronize the volume of Ren'Py mixers with all associated channels.
+      Synchronize the volume of Ren'Py mixers with all associated events.
       """
       for mixer in renpy.music.get_all_mixers():
         volume = self.__get_mixer_volume(mixer)
