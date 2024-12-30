@@ -16,9 +16,6 @@ init python:
       self.__version = version
       self.__mixer_volume = {}
 
-      if default_channels:
-        self.register_default_channels()
-
       if renpy.android:
         # The FMOD library expects to be loaded via Android JNI
         # It encounters an ill-defined internal error when loading via python CDLL
@@ -30,6 +27,10 @@ init python:
           self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
       else:
         self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
+
+      # Register default channels if enabled
+      if default_channels:
+        self.register_default_channels()
 
       # Ensure that the engine is properly shut down when reloading and exiting
       if not self.shutdown in config.quit_callbacks:
