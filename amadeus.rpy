@@ -62,6 +62,7 @@ init python:
           'name': channel.get_name(),
           'mixer': channel.get_mixer(),
           'now_playing': channel.now_playing(),
+          'queue': channel.get_queue(),
         }
         channels.append(data)
 
@@ -91,9 +92,11 @@ init python:
       self.clear_channels()
       for channel_data in load_state['channels']:
         self.register_channel(channel_data['name'], channel_data['mixer'])
+        channel = self.__get_channel(channel_data['name'])
         if channel_data['now_playing'] is not None:
-          channel = self.__get_channel(channel_data['name'])
-          channel.play_sound(*channel_data['now_playing'].values())
+          channel.queue_sound(*channel_data['now_playing'].values())
+        for sound in channel_data['queue']:
+          channel.queue_sound(*sound.values())
 
       # Restore event slots and start playing any active events
       for slot_id in load_state['event_slots']:
