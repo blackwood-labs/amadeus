@@ -55,7 +55,18 @@ init python:
       if not 'AMADEUS_STATE' in globals():
         return
 
-      AMADEUS_STATE['channel_list'] = self.__channel_list
+      channels = []
+      for channel in self.__channel_list:
+        data = {
+          'id': channel.get_id(),
+          'name': channel.get_name(),
+          'mixer': channel.get_mixer(),
+          'now_playing': channel.now_playing(),
+        }
+        channels.append(data)
+
+      AMADEUS_STATE['channels'] = channels
+
       AMADEUS_STATE['event_slots'] = self.__event_slots
 
     def load(self):
@@ -68,23 +79,25 @@ init python:
       if not 'AMADEUS_STATE' in globals():
         return
 
+      load_state = AMADEUS_STATE.copy()
+
       # Stop all sounds without affecting state
       for channel in self.__channel_list:
-        self.__engine.stop_sound(channel['id'], 0.0)
+        channel.stop_sound(0.0)
       for slot_id in self.__event_slots:
         self.__engine.stop_event(slot_id, 0.0)
 
       # Restore channels and start playing any active sounds
-      self.__channel_list = AMADEUS_STATE['channel_list']
-      for channel in self.__channel_list:
-        if channel['data'] is not None:
-          data = channel['data']
-          data[3] = channel['volume'] # Override volume with current value
-          self.play_sound(*data)
+      self.clear_channels()
+      for channel_data in load_state['channels']:
+        self.register_channel(channel_data['name'], channel_data['mixer'])
+        if channel_data['now_playing'] is not None:
+          channel = self.__get_channel(channel_data['name'])
+          channel.play_sound(*channel_data['now_playing'].values())
 
       # Restore event slots and start playing any active events
-      for slot_id in AMADEUS_STATE['event_slots']:
-        event = AMADEUS_STATE['event_slots'][slot_id]
+      for slot_id in load_state['event_slots']:
+        event = load_state['event_slots'][slot_id]
         if event is not None and event['save']:
           self.load_event(event['name'], event['mixer'])
           for key in event['parameters'].keys():
@@ -189,6 +202,7 @@ init python:
       Clear ths list of registered channels.
       """
       self.__channel_list = []
+      self.save()
 
     def play_sound(self, filepath, channel=None, loop=False, volume=1.0, fade=0.0):
       """

@@ -9,6 +9,7 @@ init python:
       self.__id = id
       self.__name = name
       self.__mixer = mixer
+      self.__active = None
 
     def get_id(self):
       """
@@ -37,6 +38,15 @@ init python:
       """
       return self.__mixer
 
+    def now_playing(self):
+      """
+      Accessor for the details of the active playing sound.
+
+      Returns:
+        The details of the active playing sound as a dict.
+      """
+      return self.__active
+
     def play_sound(self, filepath, loop, volume, fade):
       """
       Plays sound from the given filepath.
@@ -47,6 +57,13 @@ init python:
         volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
         fade (float): Duration in seconds to fade in.
       """
+      self.__active = {
+        'filepath': filepath,
+        'loop': loop,
+        'volume': volume,
+        'fade': fade,
+      }
+
       mode = (0x0 | 0x02000000 | 0x08000000) # FMOD_DEFAULT | FMOD_IGNORETAGS | FMOD_LOWMEM;
       if loop:
         mode = (mode | 0x00000002) # FMOD_LOOP_NORMAL
@@ -65,6 +82,7 @@ init python:
       Args:
         fade (float): Duration in seconds to fade out.
       """
+      self.__active = None
       self.__engine.stop_sound(self.__id, fade)
 
     def set_sound_volume(self, volume, fade):
@@ -75,6 +93,11 @@ init python:
         volume (float): Relative volume percent, where 1.0 = 100% of mixer and 0.0 = 0%.
         fade (float): Duration in seconds to fade.
       """
+      if self.__active is None:
+        return
+
+      self.__active['volume'] = volume
+
       relative_volume = volume * renpy.game.preferences.volumes.get(self.__mixer, 1.0)
       if renpy.game.preferences.mute.get(self.__mixer, False):
         relative_volume = 0.0
