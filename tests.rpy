@@ -224,6 +224,20 @@ label amadeus_tests:
   $ test_suite_reset()
 
   """
+  Test - Play sounds back to back in queue...
+  """
+
+  $ amadeus.play_sound("amadeus/test_files/ping.ogg")
+  $ amadeus.queue_sound("amadeus/test_files/beep.ogg")
+  $ amadeus.queue_sound("amadeus/test_files/ping.ogg")
+
+  """
+  Test - Play sounds back to back in queue...{fast} Success!
+  """
+
+  $ test_suite_reset()
+
+  """
   == AMADEUS TEST SUITE COMPLETE ==
   """
 
