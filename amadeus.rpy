@@ -163,6 +163,7 @@ init python:
 
       Raises:
         RuntimeError: Attempted to register more than the maximum number of channels.
+        ValueError: Attempted to register a channel with a name that is already in use.
       """
       if len(self.__channel_list) == self.__channel_limit:
         raise RuntimeError('Exceeded maximum number of channels')
@@ -170,7 +171,7 @@ init python:
       # Avoid duplicate registrations
       for channel in self.__channel_list:
         if channel.get_name() == name:
-          return
+          raise ValueError('Channel has already been registered')
 
       channel = AmadeusChannel(engine=self.__engine, id=len(self.__channel_list), name=name, mixer=mixer)
 

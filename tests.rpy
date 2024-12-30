@@ -28,11 +28,16 @@ label amadeus_tests:
   Test - Registering channels...
   """
 
-  # Duplicate channel registrations are fine, and are ignored...
-  $ amadeus.register_channel("music", "music")
-
   # Test that unknown mixers can be registered
   $ amadeus.register_channel("invalid", "invalid")
+
+  # Duplicate channel registrations cause a ValueError exception
+  python:
+    try:
+      amadeus.register_channel("music", "music")
+      raise RuntimeError("Failed test...")
+    except ValueError:
+      pass
 
   # Test that too many channels causes a RuntimeError
   python:
