@@ -185,6 +185,23 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodPlaySound(JNIEnv
    }
 }
 
+JNIEXPORT bool JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodIsSoundPlaying(JNIEnv * env, jobject obj, jint jchannel_id) {
+   int channel_id = (int) jchannel_id;
+
+   try {
+      FMOD::Channel *channel = validate_channel(channel_id);
+      if (channel) {
+         return true;
+      }
+
+      return false;
+   } catch (FMOD_RESULT result) {
+      char buffer[50];
+      sprintf(buffer, "FMOD encountered an error: %d", (int) result);
+      env->ThrowNew(env->FindClass("java/lang/Exception"), buffer);
+   }
+}
+
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound(JNIEnv * env, jobject obj, jint jchannel_id, jfloat jfade) {
    int channel_id = (int) jchannel_id;
    float fade = (float) jfade;

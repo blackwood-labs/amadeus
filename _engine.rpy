@@ -36,6 +36,19 @@ init python:
       pass
 
     @abstractmethod
+    def is_sound_playing(self, channel_id):
+      """
+      Checks if a sound on the specified channel is currently playing.
+
+      Args:
+        channel_id (int): The numeric ID of the channel to check.
+
+      Returns:
+        True if the channel is playing sound, False otherwise.
+      """
+      pass
+
+    @abstractmethod
     def stop_sound(self, channel_id, fade):
       """
       Stops the sound on the given channel.

@@ -61,6 +61,18 @@ init python:
       # FMOD can find Android assets when prefixed with "file:///android_asset/"
       self.__engine.play_sound('file:///android_asset/x-game/' + filepath, channel_id, mode, volume, fade)
 
+    def is_sound_playing(self, channel_id):
+      """
+      Checks if a sound on the specified channel is currently playing.
+
+      Args:
+        channel_id (int): The numeric ID of the channel to check.
+
+      Returns:
+        True if the channel is playing sound, False otherwise.
+      """
+      return self.__engine.is_sound_playing(channel_id)
+
     def stop_sound(self, channel_id, fade):
       """
       Stops the sound on the given channel.

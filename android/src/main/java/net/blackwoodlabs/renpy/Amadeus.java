@@ -23,6 +23,7 @@ public class Amadeus {
 	private native void fmodShutdown();
 	private native void fmodTick();
 	private native void fmodPlaySound(String filepath, int channel_id, int mode, float volume, float fade);
+	private native boolean fmodIsSoundPlaying(int channel_id);
 	private native void fmodStopSound(int channel_id, float fade);
 	private native void fmodSetSoundVolume(int channel_id, float volume, float fade);
 	private native void fmodLoadBank(String filepath);
@@ -95,6 +96,15 @@ public class Amadeus {
 	 */
 	public void play_sound(String filepath, int channel_id, int mode, float volume, float fade) {
 		fmodPlaySound(filepath, channel_id, mode, fade, volume);
+	}
+
+	/**
+	 * Checks if a sound on the specified channel is currently playing.
+	 *
+	 * @param channel_id The numeric ID of the channel to check.
+	 */
+	public boolean is_sound_playing(int channel_id) {
+		return fmodIsSoundPlaying(channel_id);
 	}
 
 	/**

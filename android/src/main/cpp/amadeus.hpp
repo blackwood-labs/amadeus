@@ -18,6 +18,9 @@ JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodTick
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodPlaySound
   (JNIEnv *, jobject, jstring, jint, jint, jfloat, jfloat);
 
+JNIEXPORT bool JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodIsSoundPlaying
+  (JNIEnv *, jobject, jint);
+
 JNIEXPORT void JNICALL Java_net_blackwoodlabs_renpy_Amadeus_fmodStopSound
   (JNIEnv *, jobject, jint, jfloat);
 

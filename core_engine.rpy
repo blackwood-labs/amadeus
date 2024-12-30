@@ -102,6 +102,20 @@ init python:
 
       self.__call('System_Update', self.__fmod)
 
+    def is_sound_playing(self, channel_id):
+      """
+      Checks if a sound on the specified channel is currently playing.
+
+      Args:
+        channel_id (int): The numeric ID of the channel to check.
+
+      Returns:
+        True if the channel is playing sound, False otherwise.
+      """
+      channel = self.__validate_channel(channel_id)
+
+      return channel is not None
+
     def stop_sound(self, channel_id, fade):
       """
       Stops the sound on the given channel.
