@@ -71,6 +71,22 @@ python:
   amadeus.stop_sound(channel="music")
 ```
 
+### Queuing Sounds
+
+Sounds can be queued to play after any actively playing sounds have ended. 
+
+Both `play_sound` and `stop_sound` will clear the active queue for the channel.
+
+```renpy
+python:
+  amadeus.play_sound("audio/music.ogg", channel="music")
+  amadeus.queue_sound("audio/record_scratch.ogg", channel="music")
+  amadeus.queue_sound("audio/crash.ogg", channel="sound")
+
+  amadeus.stop_sound(channel="music")
+  amadeus.stop_sound(channel="sound")
+```
+
 ### Looping
 
 By default sounds will simply play to the end of their tracks. Sounds can be
