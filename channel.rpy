@@ -11,6 +11,7 @@ init python:
       self.__mixer = mixer
       self.__mixer_volume = 1.0
       self.__active = None
+      self.__queue = []
 
     def get_id(self):
       """
@@ -48,9 +49,18 @@ init python:
       """
       return self.__active
 
-    def play_sound(self, filepath, loop, volume, fade):
+    def get_queue(self):
       """
-      Plays sound from the given filepath.
+      Accessor for the current queue of sounds.
+
+      Returns:
+        The current queue of sounds as a list of dicts.
+      """
+      return self.__queue
+
+    def queue_sound(self, filepath, loop, volume, fade):
+      """
+      Queues a sound from the given filepath.
 
       Args:
         filepath (str): The path of the file to load and play.
@@ -58,32 +68,24 @@ init python:
         volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
         fade (float): Duration in seconds to fade in.
       """
-      self.__active = {
+      data = {
         'filepath': filepath,
         'loop': loop,
         'volume': volume,
         'fade': fade,
       }
 
-      mode = (0x0 | 0x02000000 | 0x08000000) # FMOD_DEFAULT | FMOD_IGNORETAGS | FMOD_LOWMEM;
-      if loop:
-        mode = (mode | 0x00000002) # FMOD_LOOP_NORMAL
-
-      relative_volume = volume * renpy.game.preferences.volumes.get(self.__mixer, 1.0)
-
-      if renpy.game.preferences.mute.get(self.__mixer, False):
-        relative_volume = 0.0
-
-      self.__engine.play_sound(filepath, self.__id, mode, relative_volume, fade)
+      self.__queue.append(data)
 
     def stop_sound(self, fade):
       """
-      Stops any sound that might be playing.
+      Stops any sound that might be playing and clears the queue.
 
       Args:
         fade (float): Duration in seconds to fade out.
       """
       self.__active = None
+      self.__queue = []
       self.__engine.stop_sound(self.__id, fade)
 
     def set_sound_volume(self, volume, fade):
@@ -110,6 +112,10 @@ init python:
       Engine tick (20Hz).
       """
       if self.__active is not None:
+        # Check if anything is still playing
+        if not self.__engine.is_sound_playing(self.__id):
+          self.__active = None
+
         # Synchronize the active sound volume with the mixer volume level
         mixer_volume = renpy.game.preferences.volumes.get(self.__mixer, 1.0)
         if renpy.game.preferences.mute.get(self.__mixer, False):
@@ -119,3 +125,19 @@ init python:
           relative_volume = self.__active['volume'] * mixer_volume
           self.__engine.set_sound_volume(self.__id, relative_volume, 0.0)
           self.__mixer_volume = mixer_volume
+      else:
+        # Start playing a new sound if we have anything in the queue
+        if len(self.__queue):
+          data = self.__queue.pop()
+          self.__active = data
+
+          mode = (0x0 | 0x02000000 | 0x08000000) # FMOD_DEFAULT | FMOD_IGNORETAGS | FMOD_LOWMEM;
+          if data['loop']:
+            mode = (mode | 0x00000002) # FMOD_LOOP_NORMAL
+
+          relative_volume = data['volume'] * renpy.game.preferences.volumes.get(self.__mixer, 1.0)
+
+          if renpy.game.preferences.mute.get(self.__mixer, False):
+            relative_volume = 0.0
+
+          self.__engine.play_sound(data['filepath'], self.__id, mode, relative_volume, data['fade'])

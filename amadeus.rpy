@@ -210,7 +210,7 @@ init python:
 
     def play_sound(self, filepath, channel=None, loop=False, volume=1.0, fade=0.0):
       """
-      Plays sound from the given filepath on a specific channel.
+      Plays sound from the given filepath on a specific channel. Clears any existing queue.
 
       Args:
         filepath (str): The path of the file to load and play.
@@ -228,12 +228,34 @@ init python:
       channel = self.__get_channel(channel)
       channel.stop_sound(0.0)
 
-      channel.play_sound(filepath, loop, volume, fade)
+      channel.queue_sound(filepath, loop, volume, fade)
+      self.save()
+
+    def queue_sound(self, filepath, channel=None, loop=False, volume=1.0, fade=0.0):
+      """
+      Add a sound to the queue to be played on the given channel after any current sound is finished.
+
+      Args:
+        filepath (str): The path of the file to load and play.
+        channel (str): The channel to play the sound on (uses first registered channel if None).
+        loop (bool): Whether or not the sound should loop.
+        volume (float): Relative volume percent, where 1.0 = 100% and 0.0 = 0%.
+        fade (float): Duration in seconds to fade in.
+
+      Raises:
+        ValueError: The specified file or channel does not exist.
+      """
+      if not renpy.loadable(filepath):
+        raise ValueError('File does not exist: ' + str(filepath))
+
+      channel = self.__get_channel(channel)
+
+      channel.queue_sound(filepath, loop, volume, fade)
       self.save()
 
     def stop_sound(self, channel=None, fade=0.0):
       """
-      Stops the sound on the given channel.
+      Stops any active sound on the given channel, and clears the queue.
 
       Args:
         channel (str): The channel to stop the sound on (uses first registered channel if None).
