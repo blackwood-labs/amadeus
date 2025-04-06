@@ -5,6 +5,7 @@ These tests are designed to walk through the various pieces of functionality
 the engine can provide, and ensures everything is working correctly.
 """
 init:
+
   $ amadeus = Amadeus()
 
   $ amadeus.load_bank("amadeus/test_files/Master.bank")
@@ -19,6 +20,7 @@ init:
       renpy.say(None, '[[INFO] Environment Reset...')
 
 label amadeus_tests:
+
   image test_suite = "#000"
   scene test_suite
 

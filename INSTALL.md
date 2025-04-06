@@ -7,9 +7,9 @@ This document will detail how to install Amadeus and get it working in your game
 Copy all files and folders in this directory into a new directory called
 "amadeus" in your project's "game" directory. 
 
-You can delete the "test.rpy" file and the "test_files" directory, as these are
-not needed to use Amadeus in your game. These files won't cause any problems,
-but they will take up extra space if you don't delete them.
+You can delete the "test.rpy.example" file and the "test_files" directory, as
+these are not needed to use Amadeus in your game. These files won't cause any
+problems, but they will take up extra space if you don't delete them.
 
 Please keep the LICENSE.txt file in this directory included in your game.
 
