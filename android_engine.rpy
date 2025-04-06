@@ -1,4 +1,4 @@
-init python:
+init -999 python:
 
   if renpy.android:
     try:

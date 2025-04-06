@@ -1,4 +1,5 @@
-init python:
+init -999 python:
+
   class AmadeusChannel:
     """
     Representation of an individual sound channel.

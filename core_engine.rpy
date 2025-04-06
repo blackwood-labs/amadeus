@@ -1,4 +1,4 @@
-init python:
+init -999 python:
 
   from ctypes import *
   import platform
