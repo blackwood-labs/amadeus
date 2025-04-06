@@ -10,7 +10,7 @@ init python:
     Primary cross-platform engine for Amadeus.
     """
 
-    def __init__(self, channel_limit, event_limit, version):
+    def __init__(self, channel_limit, event_limit, version, lib_path):
       """
       Initialize FMOD.
 
@@ -18,6 +18,7 @@ init python:
         channel_limit (int): The maximum number of channels allowed to be registered.
         event_limit (int): The maximum number of events allowed to be run at once.
         version (int): The version of FMOD loaded via the pre-compiled libraries.
+        lib_path (string): The path the the lib directory containing FMOD libs, relative to game directory.
       """
       self.__channels = {}
       self.__event_slots = {}
@@ -39,8 +40,8 @@ init python:
       else:
         raise RuntimeError('Operating system is not supported')
 
-      self.__api = CDLL(os.path.realpath(config.gamedir) + '/amadeus/lib/' + fmod_lib)
-      self.__studio_api = CDLL(os.path.realpath(config.gamedir) + '/amadeus/lib/' + fmod_studio_lib)
+      self.__api = CDLL(os.path.realpath(config.gamedir) + os.sep + lib_path + os.sep + fmod_lib)
+      self.__studio_api = CDLL(os.path.realpath(config.gamedir) + os.sep + lib_path + os.sep + fmod_studio_lib)
 
       self.__fmod = c_void_p()
       self.__call('System_Create', byref(self.__fmod), version)
