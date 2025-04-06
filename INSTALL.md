@@ -37,6 +37,18 @@ In each download, find the following files and copy them into the
 
 Amadeus should now work correctly on PC and Mac OS.
 
+### Custom lib directory path
+
+To change the location where Amadeus looks for the FMOD libraries, you can set
+the `lib_path` argument when creating the main Amadeus object:
+
+```renpy
+python:
+  amadeus = Amadeus(lib_path='custom/path')
+```
+
+This path should be relative to the main project `game` directory.
+
 ## Android Libraries
 
 There are a few extra steps to accommodate Android builds, which involve making
