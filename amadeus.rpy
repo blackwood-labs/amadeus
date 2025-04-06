@@ -7,7 +7,7 @@ init python:
     Amadeus sound engine.
     """
 
-    def __init__(self, channel_limit=8, event_limit=8, version=0x00020299, default_channels=True):
+    def __init__(self, channel_limit=8, event_limit=8, version=0x00020299, default_channels=True, lib_path="amadeus/lib"):
       self.__channel_limit = channel_limit
       self.__channel_list = []
       self.__event_limit = event_limit
@@ -24,9 +24,9 @@ init python:
           self.__engine = AmadeusAndroidEngine(channel_limit, event_limit, version)
         except NameError:
           # If the jnius library isn't available, try loading the core engine instead
-          self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
+          self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version, lib_path)
       else:
-        self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version)
+        self.__engine = AmadeusCoreEngine(channel_limit, event_limit, version, lib_path)
 
       # Register default channels if enabled
       if default_channels:
