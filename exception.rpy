@@ -1,4 +1,5 @@
-init python:
+init -999 python:
+
   class FMODError(RuntimeError):
     """
     Raised whenever a C library call to FMOD does not return an OK.

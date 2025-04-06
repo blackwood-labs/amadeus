@@ -1,6 +1,6 @@
 default AMADEUS_STATE = {}
 
-init python:
+init -999 python:
 
   class Amadeus():
     """
